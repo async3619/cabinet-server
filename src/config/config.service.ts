@@ -9,7 +9,7 @@ import * as process from 'node:process'
 
 import { WatcherMap } from '@/crawler/watchers'
 
-type ConfigData = {
+export type ConfigData = {
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
   }

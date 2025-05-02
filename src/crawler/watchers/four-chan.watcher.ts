@@ -7,7 +7,7 @@ interface FourChanWatcherEntry {
   target: 'title' | 'content' | 'both'
 }
 
-interface FourChanWatcherOptions extends BaseWatcherOptions {
+interface FourChanWatcherOptions extends BaseWatcherOptions<'four-chan'> {
   endpoint: string
   entries: FourChanWatcherEntry[]
 }
