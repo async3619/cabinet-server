@@ -18,6 +18,7 @@ module.exports = {
   },
   ignorePatterns: ['.eslintrc.js'],
   rules: {
+    '@typescript-eslint/no-useless-constructor': 'off',
     '@channel.io/hooks-deps-element-newline': 0,
     '@typescript-eslint/explicit-member-accessibility': [
       'error',
