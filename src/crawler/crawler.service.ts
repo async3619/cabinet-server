@@ -62,8 +62,15 @@ export class CrawlerService implements OnModuleInit {
       this.schedulerRegistry.addCronJob(CRAWLER_TASK_NAME, job)
       job.start()
     } else {
-      const interval = setInterval(this.doCrawling.bind(this), crawlInterval)
-      this.schedulerRegistry.addInterval(CRAWLER_TASK_NAME, interval)
+      const crawlingTimeoutFn = async () => {
+        this.schedulerRegistry.deleteTimeout(CRAWLER_TASK_NAME)
+        await this.doCrawling()
+        const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
+        this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
+      }
+
+      const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
+      this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
     }
   }
 
