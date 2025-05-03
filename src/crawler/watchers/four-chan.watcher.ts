@@ -9,6 +9,7 @@ import type {
   WatcherResult,
 } from '@/crawler/watchers/base.watcher'
 import { BaseWatcher } from '@/crawler/watchers/base.watcher'
+import type { Watcher } from '@/watcher/types/watcher'
 
 interface FourChanWatcherEntry {
   boards: string[]
@@ -28,8 +29,8 @@ export class FourChanWatcher extends BaseWatcher<
 > {
   private readonly provider: FourChanProvider
 
-  constructor(options: FourChanWatcherOptions) {
-    super('four-chan', options)
+  constructor(options: FourChanWatcherOptions, watcher: Watcher) {
+    super('four-chan', options, watcher)
     this.provider = new FourChanProvider(options)
   }
 

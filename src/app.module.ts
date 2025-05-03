@@ -9,6 +9,7 @@ import { CrawlerModule } from '@/crawler/crawler.module'
 import { PostModule } from '@/post/post.module'
 import { PrismaModule } from '@/prisma/prisma.module'
 import { ThreadModule } from '@/thread/thread.module'
+import { WatcherModule } from '@/watcher/watcher.module'
 
 // eslint-disable-next-line no-restricted-imports
 import '../cabinet.config.json'
@@ -29,6 +30,7 @@ import '../cabinet.config.json'
     ThreadModule,
     PostModule,
     AttachmentModule,
+    WatcherModule,
   ],
 })
 export class AppModule {}

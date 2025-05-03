@@ -1,4 +1,5 @@
 import { FourChanWatcher } from '@/crawler/watchers/four-chan.watcher'
+import type { Watcher } from '@/watcher/types/watcher'
 
 type WatcherTypes = FourChanWatcher
 
@@ -10,6 +11,7 @@ type WatcherConstructorMap = {
   [TName in WatcherTypes['name']]: {
     new (
       config: Extract<WatcherTypes, { name: TName }>['config'],
+      watcher: Watcher,
     ): Extract<WatcherTypes, { name: TName }>
   }
 }

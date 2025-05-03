@@ -1,8 +1,10 @@
 import type { RawBoard } from '@/crawler/types/board'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
+import type { Watcher } from '@/watcher/types/watcher'
 
 export interface BaseWatcherOptions<TName extends string> {
+  name: string
   type: TName
 }
 
@@ -19,6 +21,7 @@ export abstract class BaseWatcher<
   protected constructor(
     readonly name: TName,
     readonly config: Readonly<TConfig>,
+    readonly entity: Watcher,
   ) {}
 
   abstract watch(): Promise<WatcherResult>

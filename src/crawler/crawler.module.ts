@@ -5,9 +5,10 @@ import { ConfigModule } from '@/config/config.module'
 import { CrawlerService } from '@/crawler/crawler.service'
 import { PostModule } from '@/post/post.module'
 import { ThreadModule } from '@/thread/thread.module'
+import { WatcherModule } from '@/watcher/watcher.module'
 
 @Module({
-  imports: [ConfigModule, BoardModule, ThreadModule, PostModule],
+  imports: [ConfigModule, WatcherModule, BoardModule, ThreadModule, PostModule],
   providers: [CrawlerService],
 })
 export class CrawlerModule {}
