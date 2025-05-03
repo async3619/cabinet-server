@@ -16,8 +16,8 @@ export interface RawAttachment<TProviderName extends string> {
 export function getAttachmentUniqueId(
   attachment: RawAttachment<string>,
 ): string {
-  return (
-    attachment.hash ??
-    [getBoardUniqueId(attachment.board), attachment.name].join('::')
-  )
+  return [
+    getBoardUniqueId(attachment.board),
+    attachment.hash ?? attachment.name,
+  ].join('::')
 }
