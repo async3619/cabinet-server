@@ -1,4 +1,4 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq'
+import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
 import { Job } from 'bullmq'
 import { filesize } from 'filesize'
@@ -13,6 +13,7 @@ import {
   RawAttachment,
 } from '@/crawler/types/attachment'
 import { DownloadError, downloadFile } from '@/utils/downloadFile'
+import { md5 } from '@/utils/hash'
 import { sleep } from '@/utils/sleep'
 
 interface AttachmentProcessorJobData {
@@ -22,6 +23,7 @@ interface AttachmentProcessorJobData {
 @Processor('attachment')
 export class AttachmentProcessor extends WorkerHost {
   private readonly logger = new Logger(AttachmentProcessor.name)
+  private readonly fileHashMap = new Map<string, string>()
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
@@ -29,6 +31,16 @@ export class AttachmentProcessor extends WorkerHost {
     private readonly attachmentService: AttachmentService,
   ) {
     super()
+  }
+
+  private async getHashFromFile(filePath: string) {
+    let hash: string | undefined = this.fileHashMap.get(filePath)
+    if (!hash) {
+      hash = await md5(filePath)
+      this.fileHashMap.set(filePath, hash)
+    }
+
+    return hash
   }
 
   private async processDownload(
@@ -54,7 +66,20 @@ export class AttachmentProcessor extends WorkerHost {
     })
 
     if (entity?.filePath && fs.existsSync(entity.filePath)) {
-      return
+      if (!entity.hash) {
+        return
+      }
+
+      const fileHash = await this.getHashFromFile(entity.filePath)
+      if (entity.hash === fileHash) {
+        return
+      }
+
+      this.logger.warn(
+        `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched, now try to download newer file`,
+      )
+
+      this.fileHashMap.set(filePath, entity.hash)
     }
 
     await fs.ensureDir(this.configService.downloadPath)
@@ -78,7 +103,7 @@ export class AttachmentProcessor extends WorkerHost {
             `Failed to download file ${fileInformation} with error code 429 (Too Many Requests)`,
           )
 
-          await sleep(5000)
+          await sleep(1000)
           continue
         }
 
@@ -90,6 +115,12 @@ export class AttachmentProcessor extends WorkerHost {
         throw e
       }
     }
+  }
+
+  @OnWorkerEvent('failed')
+  onError(job: Job<AttachmentProcessorJobData>, error: Error) {
+    this.logger.error('Attachment processing task was failed by error: ')
+    this.logger.error(error)
   }
 
   async process(job: Job<AttachmentProcessorJobData>): Promise<any> {
