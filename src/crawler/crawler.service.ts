@@ -7,6 +7,10 @@ import * as pluralize from 'pluralize'
 import prettyMilliseconds from 'pretty-ms'
 
 import { ConfigService } from '@/config/config.service'
+import {
+  getAttachmentUniqueId,
+  RawAttachment,
+} from '@/crawler/types/attachment'
 import { getBoardUniqueId, RawBoard } from '@/crawler/types/board'
 import { getPostUniqueId, RawPost } from '@/crawler/types/post'
 import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
@@ -79,11 +83,12 @@ export class CrawlerService implements OnModuleInit {
       `Starting crawling task for ${this.watchers.length} watchers`,
     )
 
-    const [elapsedTime, { posts, threads, boards }] = await stopwatch(
-      async () => {
+    const [elapsedTime, { posts, threads, boards, attachments }] =
+      await stopwatch(async () => {
         let boards: Record<string, RawBoard<string>> = {}
         let threads: Record<string, RawThread<string>> = {}
         let posts: Record<string, RawPost<string>> = {}
+        let attachments: Record<string, RawAttachment<string>> = {}
 
         for (const watcher of this.watchers) {
           const result = await watcher.watch()
@@ -111,20 +116,34 @@ export class CrawlerService implements OnModuleInit {
               .fromPairs()
               .value(),
           }
+
+          attachments = {
+            ...attachments,
+            ..._.chain(result.threads)
+              .concat(result.posts)
+              .flatMap((item) => item.attachments)
+              .map(
+                (attachment) =>
+                  [getAttachmentUniqueId(attachment), attachment] as const,
+              )
+              .fromPairs()
+              .value(),
+          }
         }
 
-        return { boards, threads, posts }
-      },
-    )
+        return { boards, threads, posts, attachments }
+      })
 
     const boardCount = Object.keys(boards).length
     const threadCount = Object.keys(threads).length
     const postCount = Object.keys(posts).length
+    const attachmentCount = Object.keys(attachments).length
 
     const tokens = [
       `${boardCount.toString()} ${pluralize('board', boardCount)}`,
       `${threadCount.toString()} ${pluralize('thread', threadCount)}`,
       `${postCount.toString()} ${pluralize('post', postCount)}`,
+      `${attachmentCount.toString()} ${pluralize('attachment', attachmentCount)}`,
     ].map((token) => `  - ${chalk.blue(token)}`)
 
     this.logger.log(`Successfully finished crawling task with:`)

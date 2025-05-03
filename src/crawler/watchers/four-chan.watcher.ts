@@ -1,6 +1,7 @@
 import * as _ from 'lodash'
 
 import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
+import type { RawAttachment } from '@/crawler/types/attachment'
 import type { RawBoard } from '@/crawler/types/board'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'

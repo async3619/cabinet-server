@@ -1,5 +1,39 @@
 import type { Endpoints, Route } from '@/utils/fetcher.types'
 
+interface FourChanNormalPost {
+  archived?: number
+  archived_on?: number
+  bumplimit?: number
+  capcode: string
+  closed?: number
+  com: string
+  h?: number
+  imagelimit?: number
+  images?: number
+  name: string
+  no: number
+  now: string
+  replies?: number
+  resto: number
+  semantic_url?: string
+  sub?: string
+  time: number
+}
+
+interface FourChanAttachmentPost extends FourChanNormalPost {
+  ext: string
+  filename: string
+  fsize: number
+  h: number
+  md5: string
+  tim: number
+  tn_h: number
+  tn_w: number
+  w: number
+}
+
+type FourChanPost = FourChanNormalPost | FourChanAttachmentPost
+
 interface FourChanBoardsResponse {
   boards: Array<{
     board: string
@@ -71,33 +105,7 @@ interface FourChanCatalogResponse {
 }
 
 interface FourChanPostsResponse {
-  posts: Array<{
-    archived?: number
-    archived_on?: number
-    bumplimit?: number
-    capcode: string
-    closed?: number
-    com: string
-    ext?: string
-    filename?: string
-    fsize?: number
-    h?: number
-    imagelimit?: number
-    images?: number
-    md5?: string
-    name: string
-    no: number
-    now: string
-    replies?: number
-    resto: number
-    semantic_url?: string
-    sub?: string
-    tim?: number
-    time: number
-    tn_h?: number
-    tn_w?: number
-    w?: number
-  }>
+  posts: Array<FourChanPost>
 }
 
 export interface FourChanAPIEndpoints extends Endpoints {
