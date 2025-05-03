@@ -1,7 +1,7 @@
-import type { FourChanAPIEndpoints } from '@/crawler/providers/four-chan.provider.types'
+import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
+import type { RawBoard } from '@/crawler/types/board'
 import type { BaseWatcherOptions } from '@/crawler/watchers/base.watcher'
 import { BaseWatcher } from '@/crawler/watchers/base.watcher'
-import { HTTPClient } from '@/utils/fetcher'
 
 interface FourChanWatcherEntry {
   boards: string[]
@@ -19,10 +19,16 @@ export class FourChanWatcher extends BaseWatcher<
   'four-chan',
   FourChanWatcherOptions
 > {
-  private readonly fetcher: HTTPClient<FourChanAPIEndpoints>
+  private readonly provider: FourChanProvider
 
   constructor(options: FourChanWatcherOptions) {
     super('four-chan', options)
-    this.fetcher = new HTTPClient<FourChanAPIEndpoints>(options.endpoint)
+    this.provider = new FourChanProvider(options)
+  }
+
+  async watch(): Promise<RawBoard<'four-chan'>[]> {
+    const boards = await this.provider.getAllBoards()
+
+    return boards
   }
 }

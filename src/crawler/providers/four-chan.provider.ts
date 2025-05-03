@@ -16,6 +16,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
     const { boards } = await this.fetcher.get('/boards.json')
 
     return boards.map((board) => ({
+      namespace: new URL(this.options.endpoint).host,
       provider: this.name,
       code: board.board,
       title: board.title,

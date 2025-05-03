@@ -10,6 +10,7 @@ import * as process from 'node:process'
 import { WatcherMap } from '@/crawler/watchers'
 
 export type ConfigData = {
+  crawlInterval: number | string
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
   }
@@ -27,6 +28,10 @@ export class ConfigService implements OnModuleInit {
   private readonly ajv = new Ajv()
 
   private currentConfig: ConfigData | null = null
+
+  get crawlInterval(): number | string {
+    return this.config.crawlInterval
+  }
 
   get config() {
     if (!this.currentConfig) {
