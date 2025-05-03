@@ -35,6 +35,7 @@ model Thread {
   content   String?
   createdAt DateTime
 
+  watchers    Watcher[]
   attachments Attachment[]
   posts       Post[]
 
@@ -79,4 +80,12 @@ model Attachment {
 
   threads Thread[]
   posts   Post[]
+}
+
+model Watcher {
+  id   Int    @id @default(autoincrement())
+  name String
+  type String
+
+  threads Thread[]
 }

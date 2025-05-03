@@ -49,26 +49,36 @@ export class AttachmentProcessor extends WorkerHost {
       where: { id: uniqueId },
     })
 
-    if (!entity?.thumbnailFilePath && attachment.thumbnail?.url) {
-      return true
-    }
-
-    if (!entity?.filePath) {
-      return true
-    }
-
-    if (fs.existsSync(entity.filePath)) {
-      if (!entity.hash) {
-        return false
-      }
-
-      const fileHash = await this.getHashFromFile(entity.filePath)
-      if (entity.hash === fileHash) {
-        return false
+    if (attachment.thumbnail?.url) {
+      if (
+        !entity?.thumbnailFilePath ||
+        !fs.existsSync(entity.thumbnailFilePath)
+      ) {
+        this.logger.warn(
+          "This attachment doesn't seem having thumbnail file saved",
+        )
+        return true
       }
     }
 
-    return true
+    if (!entity?.filePath || !fs.existsSync(entity.filePath)) {
+      this.logger.warn("This attachment doesn't seem having file saved")
+      return true
+    }
+
+    if (!entity.hash) {
+      return false
+    }
+
+    const fileHash = await this.getHashFromFile(entity.filePath)
+    if (entity.hash !== fileHash) {
+      this.logger.warn(
+        `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched`,
+      )
+      return true
+    }
+
+    return false
   }
 
   private async processDownload(

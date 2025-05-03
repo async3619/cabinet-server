@@ -20,6 +20,8 @@ import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 import { PostService } from '@/post/post.service'
 import { ThreadService } from '@/thread/thread.service'
 import { stopwatch } from '@/utils/stopwatch'
+import { Watcher } from '@/watcher/types/watcher'
+import { WatcherService } from '@/watcher/watcher.service'
 
 const CRAWLER_TASK_NAME = 'crawler'
 
@@ -30,6 +32,7 @@ export class CrawlerService implements OnModuleInit {
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
+    @Inject(WatcherService) private readonly watcherService: WatcherService,
     @Inject(BoardService) private readonly boardService: BoardService,
     @Inject(ThreadService) private readonly threadService: ThreadService,
     @Inject(PostService) private readonly postService: PostService,
@@ -38,20 +41,24 @@ export class CrawlerService implements OnModuleInit {
   ) {}
 
   private async createWatchers(): Promise<void> {
-    const watcherNames = Object.keys(
+    const watcherTypes = Object.keys(
       this.configService.config.watchers,
     ) as Array<keyof WatcherMap>
 
-    for (const watcherName of watcherNames) {
-      const watcherConfigs = this.configService.config.watchers[watcherName]
+    for (const type of watcherTypes) {
+      const watcherConfigs = this.configService.config.watchers[type]
       if (!watcherConfigs) {
         continue
       }
 
       for (const config of watcherConfigs) {
+        const watcher = await this.watcherService.findByName(config.name)
+
         switch (config.type) {
           case 'four-chan':
-            this.watchers.push(new WATCHER_CONSTRUCTOR_MAP[config.type](config))
+            this.watchers.push(
+              new WATCHER_CONSTRUCTOR_MAP[config.type](config, watcher),
+            )
             break
 
           default:
@@ -60,12 +67,14 @@ export class CrawlerService implements OnModuleInit {
             )
         }
 
-        this.logger.log(`Successfully created '${config.type}' watcher`)
+        this.logger.log(
+          `Successfully created '${config.name}' (${config.type}) watcher`,
+        )
       }
     }
   }
 
-  private initializeSchedulers(): void {
+  private async initializeSchedulers() {
     const crawlInterval = this.configService.crawlInterval
     if (typeof crawlInterval === 'string') {
       const job = new CronJob(crawlInterval, this.doCrawling.bind(this))
@@ -78,6 +87,8 @@ export class CrawlerService implements OnModuleInit {
         const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
         this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
       }
+
+      await this.doCrawling()
 
       const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
       this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
@@ -96,49 +107,52 @@ export class CrawlerService implements OnModuleInit {
         let posts: Record<string, RawPost<string>> = {}
         let attachments: Record<string, RawAttachment<string>> = {}
 
+        const threadWatcherMap: Record<string, Watcher[]> = {}
+
         for (const watcher of this.watchers) {
           const result = await watcher.watch()
 
-          boards = {
-            ...boards,
-            ..._.chain(result.boards)
-              .map((board) => [getBoardUniqueId(board), board] as const)
-              .fromPairs()
-              .value(),
+          for (const thread of result.threads) {
+            const id = getThreadUniqueId(thread)
+            threadWatcherMap[id] ??= []
+            threadWatcherMap[id].push(watcher.entity)
           }
 
-          threads = {
-            ...threads,
-            ..._.chain(result.threads)
-              .map((threads) => [getThreadUniqueId(threads), threads] as const)
-              .fromPairs()
-              .value(),
-          }
+          boards = _.chain(result.boards)
+            .map((board) => [getBoardUniqueId(board), board] as const)
+            .fromPairs()
+            .merge(boards)
+            .value()
 
-          posts = {
-            ...posts,
-            ..._.chain(result.posts)
-              .map((posts) => [getPostUniqueId(posts), posts])
-              .fromPairs()
-              .value(),
-          }
+          threads = _.chain(result.threads)
+            .map((thread) => [getThreadUniqueId(thread), thread] as const)
+            .fromPairs()
+            .merge(threads)
+            .value()
 
-          attachments = {
-            ...attachments,
-            ..._.chain(result.threads)
-              .concat(result.posts)
-              .flatMap((item) => item.attachments)
-              .map(
-                (attachment) =>
-                  [getAttachmentUniqueId(attachment), attachment] as const,
-              )
-              .fromPairs()
-              .value(),
-          }
+          posts = _.chain(result.posts)
+            .map((post) => [getPostUniqueId(post), post])
+            .fromPairs()
+            .merge(posts)
+            .value()
+
+          attachments = _.chain(result.threads)
+            .concat(result.posts)
+            .flatMap((item) => item.attachments)
+            .map(
+              (attachment) =>
+                [getAttachmentUniqueId(attachment), attachment] as const,
+            )
+            .fromPairs()
+            .merge(attachments)
+            .value()
         }
 
         await this.boardService.upsertMany(Object.values(boards))
-        await this.threadService.upsertMany(Object.values(threads))
+        await this.threadService.upsertMany(
+          Object.values(threads),
+          threadWatcherMap,
+        )
         await this.postService.upsertMany(Object.values(posts))
 
         return { boards, threads, posts, attachments }
@@ -168,6 +182,6 @@ export class CrawlerService implements OnModuleInit {
 
   async onModuleInit() {
     await this.createWatchers()
-    this.initializeSchedulers()
+    await this.initializeSchedulers()
   }
 }

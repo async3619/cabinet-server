@@ -8,6 +8,7 @@ import { getAttachmentUniqueId } from '@/crawler/types/attachment'
 import { getBoardUniqueId } from '@/crawler/types/board'
 import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
 import { PrismaService } from '@/prisma/prisma.service'
+import { Watcher } from '@/watcher/types/watcher'
 
 @Injectable()
 export class ThreadService extends EntityBaseService<'thread'> {
@@ -19,7 +20,10 @@ export class ThreadService extends EntityBaseService<'thread'> {
     super(prismaService, 'thread')
   }
 
-  async upsertMany(threads: RawThread<string>[]) {
+  async upsertMany(
+    threads: RawThread<string>[],
+    watcherMap: Record<string, Watcher[]>,
+  ) {
     for (const thread of threads) {
       await this.attachmentService.saveMany(thread.attachments)
 
@@ -37,6 +41,9 @@ export class ThreadService extends EntityBaseService<'thread'> {
           connect: thread.attachments.map((item) => ({
             id: getAttachmentUniqueId(item),
           })),
+        },
+        watchers: {
+          connect: watcherMap[id].map((item) => ({ id: item.id })),
         },
       }
 
