@@ -15,6 +15,10 @@ import { WatcherMap } from '@/crawler/watchers'
 export type ConfigData = {
   crawlInterval: number | string
   downloadPath: string
+  throttle: {
+    download: number
+    failover: number
+  }
   thumbnailPath: string
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
@@ -33,6 +37,10 @@ export class ConfigService implements OnModuleInit {
   private readonly ajv = new Ajv()
 
   private currentConfig: ConfigData | null = null
+
+  get throttle() {
+    return this.config.throttle
+  }
 
   get crawlInterval(): number | string {
     return this.config.crawlInterval

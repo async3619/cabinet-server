@@ -76,6 +76,7 @@ export class AttachmentProcessor extends WorkerHost {
   ): Promise<void> {
     const { attachment } = job.data
     const uniqueId = getAttachmentUniqueId(attachment)
+    const throttle = this.configService.throttle
 
     const fileInformation = [
       `'${attachment.createdAt}${attachment.extension}'`,
@@ -119,7 +120,7 @@ export class AttachmentProcessor extends WorkerHost {
 
         this.logger.log(`Successfully downloaded file ${fileInformation}`)
 
-        await sleep(1000)
+        await sleep(throttle.download)
         break
       } catch (e) {
         if (e instanceof DownloadError && e.statusCode === 429) {
@@ -127,7 +128,7 @@ export class AttachmentProcessor extends WorkerHost {
             `Failed to download file ${fileInformation} with error code 429 (Too Many Requests)`,
           )
 
-          await sleep(1000)
+          await sleep(throttle.failover)
           continue
         }
 
