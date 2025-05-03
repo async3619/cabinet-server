@@ -1,4 +1,4 @@
-export type MethodTypes = 'GET' | 'POST'
+type MethodTypes = 'GET' | 'POST'
 
 export interface Route<
   TResponse,
@@ -55,7 +55,8 @@ export type ResponseTypeOf<
     : never
 
 type ExtractParam<Path, NextPart> = Path extends `:${infer Param}`
-  ? Path extends `:${infer Param}.${infer _}`
+  ? // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    Path extends `:${infer Param}.${infer _}`
     ? Record<Param, string> & NextPart
     : Record<Param, string> & NextPart
   : NextPart

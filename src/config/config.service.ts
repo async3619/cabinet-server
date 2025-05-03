@@ -9,6 +9,9 @@ import * as process from 'node:process'
 
 import { WatcherMap } from '@/crawler/watchers'
 
+/**
+ * @public
+ */
 export type ConfigData = {
   crawlInterval: number | string
   watchers: {

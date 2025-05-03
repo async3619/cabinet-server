@@ -33,7 +33,7 @@ type GetOptions<
   TPath extends string,
 > = Omit<PostOptions<TEndpoint, TPath>, 'body'>
 
-export class HttpRequestError extends Error {
+class HttpRequestError extends Error {
   constructor(
     readonly statusCode: number,
     readonly message: string,
