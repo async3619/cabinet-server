@@ -1,8 +1,6 @@
 import * as _ from 'lodash'
 
 import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
-import type { RawAttachment } from '@/crawler/types/attachment'
-import type { RawBoard } from '@/crawler/types/board'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
 import { getThreadUniqueId } from '@/crawler/types/thread'
@@ -14,7 +12,7 @@ import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 
 interface FourChanWatcherEntry {
   boards: string[]
-  query: string
+  queries: string[]
   target: 'title' | 'content' | 'both'
 }
 
@@ -69,10 +67,14 @@ export class FourChanWatcher extends BaseWatcher<
       .value()
 
     const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
-    for (const [{ query, target }, threads] of entryThreadPairs) {
+    for (const [{ queries, target }, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
-        const titleMatched = thread.title?.includes(query) ?? false
-        const contentMatched = thread.content?.includes(query) ?? false
+        const titleMatched = queries.some((query) =>
+          thread.title?.includes(query),
+        )
+        const contentMatched = queries.some((query) =>
+          thread.content?.includes(query),
+        )
 
         if (target === 'title') {
           return titleMatched
