@@ -19,6 +19,7 @@ export type ConfigData = {
       download: number
       failover: number
     }
+    hashCheck?: boolean
     thumbnailPath: string
   }
   crawlInterval: number | string

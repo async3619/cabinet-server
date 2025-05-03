@@ -44,6 +44,7 @@ export class AttachmentProcessor extends WorkerHost {
   }
 
   private async checkShouldDownload(attachment: RawAttachment<string>) {
+    const { hashCheck } = this.configService.attachment
     const uniqueId = getAttachmentUniqueId(attachment)
     const entity = await this.attachmentService.findOne({
       where: { id: uniqueId },
@@ -66,16 +67,18 @@ export class AttachmentProcessor extends WorkerHost {
       return true
     }
 
-    if (!entity.hash) {
-      return false
-    }
+    if (hashCheck) {
+      if (!entity.hash) {
+        return false
+      }
 
-    const fileHash = await this.getHashFromFile(entity.filePath)
-    if (entity.hash !== fileHash) {
-      this.logger.warn(
-        `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched`,
-      )
-      return true
+      const fileHash = await this.getHashFromFile(entity.filePath)
+      if (entity.hash !== fileHash) {
+        this.logger.warn(
+          `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched`,
+        )
+        return true
+      }
     }
 
     return false
