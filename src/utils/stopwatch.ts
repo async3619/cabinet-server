@@ -5,9 +5,11 @@ function getTimestamp() {
   return hrTime[0] * 1000 + hrTime[1] / 1000000
 }
 
-export async function stopwatch(task: () => Promise<void>) {
+export async function stopwatch<T>(
+  task: () => Promise<T>,
+): Promise<[number, T]> {
   const startTime = getTimestamp()
-  await task()
+  const result = await task()
 
-  return getTimestamp() - startTime
+  return [getTimestamp() - startTime, result]
 }

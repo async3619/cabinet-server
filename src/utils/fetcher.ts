@@ -55,7 +55,7 @@ export class HTTPClient<TEndpoints extends Endpoints> {
     const params = { ...pathParams }
 
     // replace path parameters in the URL
-    url.pathname = url.pathname.replace(/:[^/]+/g, (match) => {
+    url.pathname = url.pathname.replace(/:[^/.]+/g, (match) => {
       const paramKey = match.slice(1)
       if (paramKey in params) {
         return params[paramKey]

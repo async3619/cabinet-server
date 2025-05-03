@@ -2,11 +2,14 @@ import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common'
 import { SchedulerRegistry } from '@nestjs/schedule'
 import chalk from 'chalk'
 import { CronJob } from 'cron'
+import * as _ from 'lodash'
 import * as pluralize from 'pluralize'
 import prettyMilliseconds from 'pretty-ms'
 
 import { ConfigService } from '@/config/config.service'
 import { getBoardUniqueId, RawBoard } from '@/crawler/types/board'
+import { getPostUniqueId, RawPost } from '@/crawler/types/post'
+import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
 import { WATCHER_CONSTRUCTOR_MAP, WatcherMap } from '@/crawler/watchers'
 import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 import { stopwatch } from '@/utils/stopwatch'
@@ -69,24 +72,58 @@ export class CrawlerService implements OnModuleInit {
       `Starting crawling task for ${this.watchers.length} watchers`,
     )
 
-    const allBoardMap: Record<string, RawBoard<string>> = {}
-    const elapsedTime = await stopwatch(async () => {
-      for (const watcher of this.watchers) {
-        const boards = await watcher.watch()
-        for (const board of boards) {
-          allBoardMap[getBoardUniqueId(board)] = board
-        }
-      }
-    })
+    const [elapsedTime, { posts, threads, boards }] = await stopwatch(
+      async () => {
+        let boards: Record<string, RawBoard<string>> = {}
+        let threads: Record<string, RawThread<string>> = {}
+        let posts: Record<string, RawPost<string>> = {}
 
-    const boardCount = Object.keys(allBoardMap).length
+        for (const watcher of this.watchers) {
+          const result = await watcher.watch()
+
+          boards = {
+            ...boards,
+            ..._.chain(result.boards)
+              .map((board) => [getBoardUniqueId(board), board] as const)
+              .fromPairs()
+              .value(),
+          }
+
+          threads = {
+            ...threads,
+            ..._.chain(result.threads)
+              .map((threads) => [getThreadUniqueId(threads), threads] as const)
+              .fromPairs()
+              .value(),
+          }
+
+          posts = {
+            ...posts,
+            ..._.chain(result.posts)
+              .map((posts) => [getPostUniqueId(posts), posts])
+              .fromPairs()
+              .value(),
+          }
+        }
+
+        return { boards, threads, posts }
+      },
+    )
+
+    const boardCount = Object.keys(boards).length
+    const threadCount = Object.keys(threads).length
+    const postCount = Object.keys(posts).length
+
     const tokens = [
       `${boardCount.toString()} ${pluralize('board', boardCount)}`,
-    ]
-      .map((token) => chalk.blue(token))
-      .join(' and ')
+      `${threadCount.toString()} ${pluralize('thread', threadCount)}`,
+      `${postCount.toString()} ${pluralize('post', postCount)}`,
+    ].map((token) => `  - ${chalk.blue(token)}`)
 
-    this.logger.log(`Successfully finished crawling task with ${tokens}`)
+    this.logger.log(`Successfully finished crawling task with:`)
+    for (const token of tokens) {
+      this.logger.log(token)
+    }
 
     this.logger.log(
       `This crawling task took ${chalk.blue(prettyMilliseconds(elapsedTime, { verbose: true }))}`,

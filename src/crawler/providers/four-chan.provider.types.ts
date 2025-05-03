@@ -36,6 +36,72 @@ interface FourChanBoardsResponse {
   }>
 }
 
+interface FourChanCatalogResponse {
+  page: number
+  threads: Array<{
+    bumplimit?: number
+    capcode?: string
+    closed?: number
+    com?: string
+    ext: string
+    filename: string
+    fsize: number
+    h: number
+    imagelimit?: number
+    images: number
+    last_modified: number
+    md5: string
+    name: string
+    no: number
+    now: string
+    omitted_images?: number
+    omitted_posts?: number
+    replies: number
+    resto: number
+    semantic_url: string
+    sticky?: number
+    sub?: string
+    tim: number
+    time: number
+    tn_h: number
+    tn_w: number
+    trip?: string
+    w: number
+  }>
+}
+
+interface FourChanPostsResponse {
+  posts: Array<{
+    archived?: number
+    archived_on?: number
+    bumplimit?: number
+    capcode: string
+    closed?: number
+    com: string
+    ext?: string
+    filename?: string
+    fsize?: number
+    h?: number
+    imagelimit?: number
+    images?: number
+    md5?: string
+    name: string
+    no: number
+    now: string
+    replies?: number
+    resto: number
+    semantic_url?: string
+    sub?: string
+    tim?: number
+    time: number
+    tn_h?: number
+    tn_w?: number
+    w?: number
+  }>
+}
+
 export interface FourChanAPIEndpoints extends Endpoints {
+  'GET /:code/catalog.json': Route<FourChanCatalogResponse[]>
+  'GET /:code/thread/:no.json': Route<FourChanPostsResponse>
   'GET /boards.json': Route<FourChanBoardsResponse>
 }
