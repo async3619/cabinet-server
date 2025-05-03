@@ -73,6 +73,10 @@ model Attachment {
   timestamp BigInt?
   filePath  String?
 
+  thumbnailWidth    Int?
+  thumbnailHeight   Int?
+  thumbnailFilePath String?
+
   threads Thread[]
   posts   Post[]
 }

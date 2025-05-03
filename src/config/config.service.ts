@@ -15,6 +15,7 @@ import { WatcherMap } from '@/crawler/watchers'
 export type ConfigData = {
   crawlInterval: number | string
   downloadPath: string
+  thumbnailPath: string
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
   }
@@ -41,6 +42,12 @@ export class ConfigService implements OnModuleInit {
     return path.isAbsolute(this.config.downloadPath)
       ? this.config.downloadPath
       : path.join(process.cwd(), this.config.downloadPath)
+  }
+
+  get thumbnailPath(): string {
+    return path.isAbsolute(this.config.thumbnailPath)
+      ? this.config.thumbnailPath
+      : path.join(process.cwd(), this.config.thumbnailPath)
   }
 
   get config() {
