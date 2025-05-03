@@ -15,7 +15,7 @@ import { WatcherMap } from '@/crawler/watchers'
 export type ConfigData = {
   attachment: {
     downloadPath: string
-    throttle: {
+    downloadThrottle: {
       download: number
       failover: number
     }
