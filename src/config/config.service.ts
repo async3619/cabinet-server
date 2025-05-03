@@ -13,13 +13,16 @@ import { WatcherMap } from '@/crawler/watchers'
  * @public
  */
 export type ConfigData = {
-  crawlInterval: number | string
-  downloadPath: string
-  throttle: {
-    download: number
-    failover: number
+  attachment: {
+    downloadPath: string
+    downloadThrottle: {
+      download: number
+      failover: number
+    }
+    hashCheck?: boolean
+    thumbnailPath: string
   }
-  thumbnailPath: string
+  crawlInterval: number | string
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
   }
@@ -38,24 +41,12 @@ export class ConfigService implements OnModuleInit {
 
   private currentConfig: ConfigData | null = null
 
-  get throttle() {
-    return this.config.throttle
+  get attachment() {
+    return this.config.attachment
   }
 
   get crawlInterval(): number | string {
     return this.config.crawlInterval
-  }
-
-  get downloadPath(): string {
-    return path.isAbsolute(this.config.downloadPath)
-      ? this.config.downloadPath
-      : path.join(process.cwd(), this.config.downloadPath)
-  }
-
-  get thumbnailPath(): string {
-    return path.isAbsolute(this.config.thumbnailPath)
-      ? this.config.thumbnailPath
-      : path.join(process.cwd(), this.config.thumbnailPath)
   }
 
   get config() {

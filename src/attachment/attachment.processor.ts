@@ -44,6 +44,7 @@ export class AttachmentProcessor extends WorkerHost {
   }
 
   private async checkShouldDownload(attachment: RawAttachment<string>) {
+    const { hashCheck } = this.configService.attachment
     const uniqueId = getAttachmentUniqueId(attachment)
     const entity = await this.attachmentService.findOne({
       where: { id: uniqueId },
@@ -66,16 +67,18 @@ export class AttachmentProcessor extends WorkerHost {
       return true
     }
 
-    if (!entity.hash) {
-      return false
-    }
+    if (hashCheck) {
+      if (!entity.hash) {
+        return false
+      }
 
-    const fileHash = await this.getHashFromFile(entity.filePath)
-    if (entity.hash !== fileHash) {
-      this.logger.warn(
-        `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched`,
-      )
-      return true
+      const fileHash = await this.getHashFromFile(entity.filePath)
+      if (entity.hash !== fileHash) {
+        this.logger.warn(
+          `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched`,
+        )
+        return true
+      }
     }
 
     return false
@@ -86,7 +89,8 @@ export class AttachmentProcessor extends WorkerHost {
   ): Promise<void> {
     const { attachment } = job.data
     const uniqueId = getAttachmentUniqueId(attachment)
-    const throttle = this.configService.throttle
+    const { downloadThrottle, thumbnailPath, downloadPath } =
+      this.configService.attachment
 
     const fileInformation = [
       `'${attachment.createdAt}${attachment.extension}'`,
@@ -96,12 +100,12 @@ export class AttachmentProcessor extends WorkerHost {
       .join(' ')
 
     const filePath = path.join(
-      this.configService.downloadPath,
+      downloadPath,
       `${attachment.createdAt}${attachment.extension}`,
     )
 
-    const thumbnailPath = path.join(
-      this.configService.thumbnailPath,
+    const thumbnailFilePath = path.join(
+      thumbnailPath,
       `${attachment.createdAt}s.jpg`,
     )
 
@@ -110,14 +114,14 @@ export class AttachmentProcessor extends WorkerHost {
       return
     }
 
-    await fs.ensureDir(this.configService.downloadPath)
-    await fs.ensureDir(this.configService.thumbnailPath)
+    await fs.ensureDir(downloadPath)
+    await fs.ensureDir(thumbnailPath)
 
     while (true) {
       try {
         await downloadFile(attachment.url, filePath)
         if (attachment.thumbnail) {
-          await downloadFile(attachment.thumbnail.url, thumbnailPath)
+          await downloadFile(attachment.thumbnail.url, thumbnailFilePath)
         }
 
         const fileHash = await md5(filePath)
@@ -125,12 +129,12 @@ export class AttachmentProcessor extends WorkerHost {
 
         await this.attachmentService.update({
           where: { id: uniqueId },
-          data: { filePath, thumbnailFilePath: thumbnailPath },
+          data: { filePath, thumbnailFilePath },
         })
 
         this.logger.log(`Successfully downloaded file ${fileInformation}`)
 
-        await sleep(throttle.download)
+        await sleep(downloadThrottle.download)
         break
       } catch (e) {
         if (e instanceof DownloadError && e.statusCode === 429) {
@@ -138,7 +142,7 @@ export class AttachmentProcessor extends WorkerHost {
             `Failed to download file ${fileInformation} with error code 429 (Too Many Requests)`,
           )
 
-          await sleep(throttle.failover)
+          await sleep(downloadThrottle.failover)
           continue
         }
 
