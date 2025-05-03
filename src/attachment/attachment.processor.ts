@@ -43,6 +43,34 @@ export class AttachmentProcessor extends WorkerHost {
     return hash
   }
 
+  private async checkShouldDownload(attachment: RawAttachment<string>) {
+    const uniqueId = getAttachmentUniqueId(attachment)
+    const entity = await this.attachmentService.findOne({
+      where: { id: uniqueId },
+    })
+
+    if (!entity?.thumbnailFilePath && attachment.thumbnail?.url) {
+      return true
+    }
+
+    if (!entity?.filePath) {
+      return true
+    }
+
+    if (fs.existsSync(entity.filePath)) {
+      if (!entity.hash) {
+        return false
+      }
+
+      const fileHash = await this.getHashFromFile(entity.filePath)
+      if (entity.hash === fileHash) {
+        return false
+      }
+    }
+
+    return true
+  }
+
   private async processDownload(
     job: Job<AttachmentProcessorJobData>,
   ): Promise<void> {
@@ -61,36 +89,32 @@ export class AttachmentProcessor extends WorkerHost {
       `${attachment.createdAt}${attachment.extension}`,
     )
 
-    const entity = await this.attachmentService.findOne({
-      where: { id: uniqueId },
-    })
+    const thumbnailPath = path.join(
+      this.configService.thumbnailPath,
+      `${attachment.createdAt}s.jpg`,
+    )
 
-    if (entity?.filePath && fs.existsSync(entity.filePath)) {
-      if (!entity.hash) {
-        return
-      }
-
-      const fileHash = await this.getHashFromFile(entity.filePath)
-      if (entity.hash === fileHash) {
-        return
-      }
-
-      this.logger.warn(
-        `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched, now try to download newer file`,
-      )
-
-      this.fileHashMap.set(filePath, entity.hash)
+    const shouldDownload = await this.checkShouldDownload(attachment)
+    if (!shouldDownload) {
+      return
     }
 
     await fs.ensureDir(this.configService.downloadPath)
+    await fs.ensureDir(this.configService.thumbnailPath)
 
     while (true) {
       try {
         await downloadFile(attachment.url, filePath)
+        if (attachment.thumbnail) {
+          await downloadFile(attachment.thumbnail.url, thumbnailPath)
+        }
+
+        const fileHash = await md5(filePath)
+        this.fileHashMap.set(filePath, fileHash)
 
         await this.attachmentService.update({
           where: { id: uniqueId },
-          data: { filePath },
+          data: { filePath, thumbnailFilePath: thumbnailPath },
         })
 
         this.logger.log(`Successfully downloaded file ${fileInformation}`)
