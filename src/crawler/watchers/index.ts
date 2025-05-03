@@ -14,6 +14,10 @@ type WatcherConstructorMap = {
   }
 }
 
+export type WatcherOptionsMap = {
+  [TName in WatcherTypes['name']]: WatcherMap[TName]['config']
+}
+
 export const WATCHER_CONSTRUCTOR_MAP: WatcherConstructorMap = {
   'four-chan': FourChanWatcher,
 }
