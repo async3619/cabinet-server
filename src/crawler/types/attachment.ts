@@ -10,6 +10,7 @@ export interface RawAttachment<TProviderName extends string> {
   name: string
   size?: number
   thumbnail?: RawAttachment<TProviderName>
+  url: string
   width: number
 }
 

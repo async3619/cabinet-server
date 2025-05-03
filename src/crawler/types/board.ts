@@ -1,7 +1,7 @@
 export interface RawBoard<TProviderName extends string> {
   code: string
   description: string
-  namespace?: string
+  namespace: string
   provider: TProviderName
   title: string
 }

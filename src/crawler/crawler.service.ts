@@ -6,6 +6,7 @@ import * as _ from 'lodash'
 import * as pluralize from 'pluralize'
 import prettyMilliseconds from 'pretty-ms'
 
+import { BoardService } from '@/board/board.service'
 import { ConfigService } from '@/config/config.service'
 import {
   getAttachmentUniqueId,
@@ -16,6 +17,8 @@ import { getPostUniqueId, RawPost } from '@/crawler/types/post'
 import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
 import { WATCHER_CONSTRUCTOR_MAP, WatcherMap } from '@/crawler/watchers'
 import { BaseWatcher } from '@/crawler/watchers/base.watcher'
+import { PostService } from '@/post/post.service'
+import { ThreadService } from '@/thread/thread.service'
 import { stopwatch } from '@/utils/stopwatch'
 
 const CRAWLER_TASK_NAME = 'crawler'
@@ -27,6 +30,9 @@ export class CrawlerService implements OnModuleInit {
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
+    @Inject(BoardService) private readonly boardService: BoardService,
+    @Inject(ThreadService) private readonly threadService: ThreadService,
+    @Inject(PostService) private readonly postService: PostService,
     @Inject(SchedulerRegistry)
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
@@ -130,6 +136,10 @@ export class CrawlerService implements OnModuleInit {
               .value(),
           }
         }
+
+        await this.boardService.upsertMany(Object.values(boards))
+        await this.threadService.upsertMany(Object.values(threads))
+        await this.postService.upsertMany(Object.values(posts))
 
         return { boards, threads, posts, attachments }
       })

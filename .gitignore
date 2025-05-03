@@ -57,3 +57,5 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 .eslintcache
 cabinet.config.json
+/prisma/dev.db
+/prisma/dev.db-journal

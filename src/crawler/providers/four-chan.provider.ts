@@ -55,6 +55,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                   hash: thread.md5,
                   createdAt: thread.tim,
                   size: thread.fsize,
+                  url: `https://i.4cdn.org/${board.code}/${thread.tim}${thread.ext}`,
                   thumbnail: {
                     board,
                     name: `${thread.tim}s`,
@@ -62,6 +63,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                     width: thread.tn_w,
                     height: thread.tn_h,
                     createdAt: thread.tim,
+                    url: `https://i.4cdn.org/${board.code}/${thread.tim}s.jpg`,
                   },
                 } satisfies RawAttachment<'four-chan'>,
               ]
@@ -99,6 +101,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                 hash: post.md5,
                 createdAt: post.tim,
                 size: post.fsize,
+                url: `https://i.4cdn.org/${thread.board.code}/${post.tim}${post.ext}`,
                 thumbnail: {
                   board: thread.board,
                   name: `${post.tim}s`,
@@ -106,6 +109,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                   width: post.tn_w,
                   height: post.tn_h,
                   createdAt: post.tim,
+                  url: `https://i.4cdn.org/${thread.board.code}/${post.tim}s.jpg`,
                 },
               } satisfies RawAttachment<'four-chan'>,
             ]
