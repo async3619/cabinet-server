@@ -86,7 +86,8 @@ export class AttachmentProcessor extends WorkerHost {
   ): Promise<void> {
     const { attachment } = job.data
     const uniqueId = getAttachmentUniqueId(attachment)
-    const throttle = this.configService.throttle
+    const { throttle, thumbnailPath, downloadPath } =
+      this.configService.attachment
 
     const fileInformation = [
       `'${attachment.createdAt}${attachment.extension}'`,
@@ -96,12 +97,12 @@ export class AttachmentProcessor extends WorkerHost {
       .join(' ')
 
     const filePath = path.join(
-      this.configService.downloadPath,
+      downloadPath,
       `${attachment.createdAt}${attachment.extension}`,
     )
 
-    const thumbnailPath = path.join(
-      this.configService.thumbnailPath,
+    const thumbnailFilePath = path.join(
+      thumbnailPath,
       `${attachment.createdAt}s.jpg`,
     )
 
@@ -110,14 +111,14 @@ export class AttachmentProcessor extends WorkerHost {
       return
     }
 
-    await fs.ensureDir(this.configService.downloadPath)
-    await fs.ensureDir(this.configService.thumbnailPath)
+    await fs.ensureDir(downloadPath)
+    await fs.ensureDir(thumbnailPath)
 
     while (true) {
       try {
         await downloadFile(attachment.url, filePath)
         if (attachment.thumbnail) {
-          await downloadFile(attachment.thumbnail.url, thumbnailPath)
+          await downloadFile(attachment.thumbnail.url, thumbnailFilePath)
         }
 
         const fileHash = await md5(filePath)
@@ -125,7 +126,7 @@ export class AttachmentProcessor extends WorkerHost {
 
         await this.attachmentService.update({
           where: { id: uniqueId },
-          data: { filePath, thumbnailFilePath: thumbnailPath },
+          data: { filePath, thumbnailFilePath },
         })
 
         this.logger.log(`Successfully downloaded file ${fileInformation}`)
