@@ -4,6 +4,7 @@ import * as dayjs from 'dayjs'
 
 import { AttachmentService } from '@/attachment/attachment.service'
 import { EntityBaseService } from '@/common/entity-base.service'
+import { getAttachmentUniqueId } from '@/crawler/types/attachment'
 import { getBoardUniqueId } from '@/crawler/types/board'
 import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
 import { PrismaService } from '@/prisma/prisma.service'
@@ -31,6 +32,11 @@ export class ThreadService extends EntityBaseService<'thread'> {
         createdAt: dayjs.unix(thread.createdAt).toDate(),
         board: {
           connect: { id: getBoardUniqueId(thread.board) },
+        },
+        attachments: {
+          connect: thread.attachments.map((item) => ({
+            id: getAttachmentUniqueId(item),
+          })),
         },
       }
 
