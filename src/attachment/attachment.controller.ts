@@ -20,7 +20,7 @@ export class AttachmentController {
     private readonly attachmentService: AttachmentService,
   ) {}
 
-  @Get('/:id/thumbnail')
+  @Get('/:uuid/thumbnail')
   async getThumbnail(@Param('uuid') uuid: string, @Res() res: Response) {
     const attachment = await this.attachmentService.findOne({
       where: { uuid },
