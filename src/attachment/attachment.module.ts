@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common'
 
 import { AttachmentController } from '@/attachment/attachment.controller'
 import { AttachmentProcessor } from '@/attachment/attachment.processor'
+import { AttachmentResolver } from '@/attachment/attachment.resolver'
 import { AttachmentService } from '@/attachment/attachment.service'
 import { ConfigModule } from '@/config/config.module'
 
@@ -13,7 +14,7 @@ import { ConfigModule } from '@/config/config.module'
     }),
     ConfigModule,
   ],
-  providers: [AttachmentService, AttachmentProcessor],
+  providers: [AttachmentService, AttachmentProcessor, AttachmentResolver],
   exports: [AttachmentService],
   controllers: [AttachmentController],
 })
