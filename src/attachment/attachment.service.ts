@@ -10,6 +10,7 @@ import {
   RawAttachment,
 } from '@/crawler/types/attachment'
 import { PrismaService } from '@/prisma/prisma.service'
+import { Watcher } from '@/watcher/types/watcher'
 
 @Injectable()
 export class AttachmentService extends EntityBaseService<'attachment'> {
@@ -20,7 +21,7 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
     super(prismaService, 'attachment')
   }
 
-  async save(attachment: RawAttachment<string>) {
+  async save(attachment: RawAttachment<string>, watchers: Watcher[]) {
     const id = getAttachmentUniqueId(attachment)
     const input: Omit<Prisma.AttachmentCreateInput, 'id'> = {
       name: attachment.name,
@@ -35,6 +36,9 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
       createdAt: dayjs
         .unix(Math.floor(attachment.createdAt / (1000 * 1000)))
         .toDate(),
+      watchers: {
+        connect: watchers.map((item) => ({ id: item.id })),
+      },
     }
 
     await this.prisma.attachment.upsert({
@@ -48,9 +52,15 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
     })
   }
 
-  async saveMany(attachments: RawAttachment<string>[]) {
+  async saveMany(
+    attachments: RawAttachment<string>[],
+    attachmentWatcherMap: Record<string, Watcher[]>,
+  ) {
     for (const attachment of attachments) {
-      await this.save(attachment)
+      await this.save(
+        attachment,
+        attachmentWatcherMap[getAttachmentUniqueId(attachment)],
+      )
     }
   }
 }
