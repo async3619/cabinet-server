@@ -1,6 +1,10 @@
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
+import { GraphQLModule } from '@nestjs/graphql'
 import { ScheduleModule } from '@nestjs/schedule'
+
+import * as path from 'node:path'
 
 import { AttachmentModule } from '@/attachment/attachment.module'
 import { BoardModule } from '@/board/board.module'
@@ -16,6 +20,15 @@ import '../cabinet.config.json'
 
 @Module({
   imports: [
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      playground: process.env.NODE_ENV !== 'production',
+      graphiql: process.env.NODE_ENV !== 'production',
+      autoSchemaFile:
+        process.env.NODE_ENV !== 'production'
+          ? path.join(process.cwd(), '..', 'cabinet-client', 'schema.gql')
+          : false,
+    }),
     BullModule.forRoot({
       connection: {
         host: 'localhost',

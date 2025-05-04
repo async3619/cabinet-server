@@ -88,10 +88,10 @@ export class CrawlerService implements OnModuleInit {
         this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
       }
 
-      await this.doCrawling()
-
-      const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
-      this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
+      this.doCrawling().then(() => {
+        const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
+        this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
+      })
     }
   }
 

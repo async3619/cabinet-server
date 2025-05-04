@@ -8,6 +8,15 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator nestgraphql {
+  provider   = "node node_modules/prisma-nestjs-graphql"
+  output     = "../src/generated/graphql"
+  emitSingle = true
+
+  graphqlScalars_BigInt_name      = "GraphQLBigInt"
+  graphqlScalars_BigInt_specifier = "graphql-scalars"
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
@@ -62,13 +71,15 @@ model Post {
 }
 
 model Attachment {
-  id String @id
+  id   String @id
+  uuid String @unique @default(uuid())
 
   name      String
   width     Int
   height    Int
   size      Int?
   extension String
+  mime      String?
   hash      String?
   createdAt DateTime
   timestamp BigInt?
@@ -78,8 +89,9 @@ model Attachment {
   thumbnailHeight   Int?
   thumbnailFilePath String?
 
-  threads Thread[]
-  posts   Post[]
+  threads  Thread[]
+  posts    Post[]
+  watchers Watcher[]
 }
 
 model Watcher {
@@ -87,5 +99,6 @@ model Watcher {
   name String
   type String
 
-  threads Thread[]
+  threads     Thread[]
+  attachments Attachment[]
 }
