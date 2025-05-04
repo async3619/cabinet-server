@@ -9,6 +9,7 @@ import type {
   WatcherResult,
 } from '@/crawler/watchers/base.watcher'
 import { BaseWatcher } from '@/crawler/watchers/base.watcher'
+import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
 interface FourChanWatcherEntry {
@@ -28,6 +29,35 @@ export class FourChanWatcher extends BaseWatcher<
   FourChanWatcherOptions
 > {
   private readonly provider: FourChanProvider
+
+  static checkIfMatched(options: FourChanWatcherOptions, thread: Thread) {
+    if (!thread.board) {
+      throw new Error("Given thread doesn't have board data")
+    }
+
+    for (const { boards, target, queries } of options.entries) {
+      if (!boards.includes(thread.board.code)) {
+        continue
+      }
+
+      const titleMatched = queries.some((query) =>
+        thread.title?.includes(query),
+      )
+      const contentMatched = queries.some((query) =>
+        thread.content?.includes(query),
+      )
+
+      if (target === 'title') {
+        return titleMatched
+      } else if (target === 'content') {
+        return contentMatched
+      } else if (target === 'both') {
+        return titleMatched || contentMatched
+      }
+    }
+
+    return false
+  }
 
   constructor(options: FourChanWatcherOptions, watcher: Watcher) {
     super('four-chan', options, watcher)

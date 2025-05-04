@@ -1,4 +1,5 @@
 import { FourChanWatcher } from '@/crawler/watchers/four-chan.watcher'
+import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
 type WatcherTypes = FourChanWatcher
@@ -13,6 +14,11 @@ type WatcherConstructorMap = {
       config: Extract<WatcherTypes, { name: TName }>['config'],
       watcher: Watcher,
     ): Extract<WatcherTypes, { name: TName }>
+
+    checkIfMatched(
+      config: Extract<WatcherTypes, { name: TName }>['config'],
+      thread: Thread,
+    ): boolean
   }
 }
 

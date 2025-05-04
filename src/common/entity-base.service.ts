@@ -53,6 +53,10 @@ export abstract class EntityBaseService<
     return this.delegate.update.bind(this.delegate)
   }
 
+  get updateMany(): TEntityDelegate['updateMany'] {
+    return this.delegate.updateMany.bind(this.delegate)
+  }
+
   get create(): TEntityDelegate['create'] {
     return this.delegate.create.bind(this.delegate)
   }
