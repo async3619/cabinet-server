@@ -14,6 +14,7 @@ import type { Watcher } from '@/watcher/types/watcher'
 
 interface FourChanWatcherEntry {
   boards: string[]
+  caseInsensitive?: boolean
   queries: string[]
   target: 'title' | 'content' | 'both'
 }
@@ -98,14 +99,20 @@ export class FourChanWatcher extends BaseWatcher<
       .value()
 
     const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
-    for (const [{ queries, target }, threads] of entryThreadPairs) {
+    for (const [entry, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
-        const titleMatched = queries.some((query) =>
-          thread.title?.includes(query),
-        )
-        const contentMatched = queries.some((query) =>
-          thread.content?.includes(query),
-        )
+        const { target, caseInsensitive } = entry
+        let title = thread.title
+        let content = thread.content
+        let queries = entry.queries
+        if (caseInsensitive) {
+          title = title?.toLowerCase()
+          content = content?.toLowerCase()
+          queries = queries.map((query) => query.toLowerCase())
+        }
+
+        const titleMatched = queries.some((query) => title?.includes(query))
+        const contentMatched = queries.some((query) => content?.includes(query))
 
         if (target === 'title') {
           return titleMatched
