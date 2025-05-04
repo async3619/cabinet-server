@@ -30,6 +30,8 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
       hash: attachment.hash,
       extension: attachment.extension,
       timestamp: attachment.createdAt,
+      thumbnailWidth: attachment.thumbnail?.width,
+      thumbnailHeight: attachment.thumbnail?.height,
       createdAt: dayjs
         .unix(Math.floor(attachment.createdAt / (1000 * 1000)))
         .toDate(),

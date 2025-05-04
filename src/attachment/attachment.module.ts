@@ -1,10 +1,10 @@
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
 
+import { AttachmentController } from '@/attachment/attachment.controller'
 import { AttachmentProcessor } from '@/attachment/attachment.processor'
+import { AttachmentService } from '@/attachment/attachment.service'
 import { ConfigModule } from '@/config/config.module'
-
-import { AttachmentService } from './attachment.service'
 
 @Module({
   imports: [
@@ -15,5 +15,6 @@ import { AttachmentService } from './attachment.service'
   ],
   providers: [AttachmentService, AttachmentProcessor],
   exports: [AttachmentService],
+  controllers: [AttachmentController],
 })
 export class AttachmentModule {}
