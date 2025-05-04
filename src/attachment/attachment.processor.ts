@@ -14,6 +14,7 @@ import {
 } from '@/crawler/types/attachment'
 import { DownloadError, downloadFile } from '@/utils/downloadFile'
 import { md5 } from '@/utils/hash'
+import { mimeType } from '@/utils/mimetype'
 import { sleep } from '@/utils/sleep'
 
 interface AttachmentProcessorJobData {
@@ -55,15 +56,11 @@ export class AttachmentProcessor extends WorkerHost {
         !entity?.thumbnailFilePath ||
         !fs.existsSync(entity.thumbnailFilePath)
       ) {
-        this.logger.warn(
-          "This attachment doesn't seem having thumbnail file saved",
-        )
         return true
       }
     }
 
     if (!entity?.filePath || !fs.existsSync(entity.filePath)) {
-      this.logger.warn("This attachment doesn't seem having file saved")
       return true
     }
 
@@ -74,9 +71,6 @@ export class AttachmentProcessor extends WorkerHost {
 
       const fileHash = await this.getHashFromFile(entity.filePath)
       if (entity.hash !== fileHash) {
-        this.logger.warn(
-          `Local (${fileHash}) and remote file hash (${entity.hash}) is not matched`,
-        )
         return true
       }
     }
@@ -100,12 +94,16 @@ export class AttachmentProcessor extends WorkerHost {
       .join(' ')
 
     const filePath = path.join(
-      downloadPath,
+      path.isAbsolute(downloadPath)
+        ? downloadPath
+        : path.join(process.cwd(), downloadPath),
       `${attachment.createdAt}${attachment.extension}`,
     )
 
     const thumbnailFilePath = path.join(
-      thumbnailPath,
+      path.isAbsolute(thumbnailPath)
+        ? thumbnailPath
+        : path.join(process.cwd(), thumbnailPath),
       `${attachment.createdAt}s.jpg`,
     )
 
@@ -124,12 +122,13 @@ export class AttachmentProcessor extends WorkerHost {
           await downloadFile(attachment.thumbnail.url, thumbnailFilePath)
         }
 
+        const mime = await mimeType(filePath)
         const fileHash = await md5(filePath)
         this.fileHashMap.set(filePath, fileHash)
 
         await this.attachmentService.update({
           where: { id: uniqueId },
-          data: { filePath, thumbnailFilePath },
+          data: { filePath, thumbnailFilePath, mime },
         })
 
         this.logger.log(`Successfully downloaded file ${fileInformation}`)
