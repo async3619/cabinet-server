@@ -108,6 +108,7 @@ export class CrawlerService implements OnModuleInit {
         let attachments: Record<string, RawAttachment<string>> = {}
 
         const threadWatcherMap: Record<string, Watcher[]> = {}
+        const attachmentWatcherMap: Record<string, Watcher[]> = {}
 
         for (const watcher of this.watchers) {
           const result = await watcher.watch()
@@ -116,6 +117,17 @@ export class CrawlerService implements OnModuleInit {
             const id = getThreadUniqueId(thread)
             threadWatcherMap[id] ??= []
             threadWatcherMap[id].push(watcher.entity)
+          }
+
+          const allAttachments = _.chain(result.threads)
+            .concat(result.posts)
+            .flatMap((item) => item.attachments)
+            .value()
+
+          for (const attachment of allAttachments) {
+            const id = getAttachmentUniqueId(attachment)
+            attachmentWatcherMap[id] ??= []
+            attachmentWatcherMap[id].push(watcher.entity)
           }
 
           boards = _.chain(result.boards)
@@ -152,8 +164,12 @@ export class CrawlerService implements OnModuleInit {
         await this.threadService.upsertMany(
           Object.values(threads),
           threadWatcherMap,
+          attachmentWatcherMap,
         )
-        await this.postService.upsertMany(Object.values(posts))
+        await this.postService.upsertMany(
+          Object.values(posts),
+          attachmentWatcherMap,
+        )
 
         return { boards, threads, posts, attachments }
       })

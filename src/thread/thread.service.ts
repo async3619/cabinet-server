@@ -23,9 +23,13 @@ export class ThreadService extends EntityBaseService<'thread'> {
   async upsertMany(
     threads: RawThread<string>[],
     watcherMap: Record<string, Watcher[]>,
+    attachmentWatcherMap: Record<string, Watcher[]>,
   ) {
     for (const thread of threads) {
-      await this.attachmentService.saveMany(thread.attachments)
+      await this.attachmentService.saveMany(
+        thread.attachments,
+        attachmentWatcherMap,
+      )
 
       const id = getThreadUniqueId(thread)
       const input: Omit<Prisma.ThreadCreateInput, 'id'> = {

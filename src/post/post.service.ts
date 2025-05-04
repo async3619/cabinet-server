@@ -9,6 +9,7 @@ import { getBoardUniqueId } from '@/crawler/types/board'
 import { getPostUniqueId, RawPost } from '@/crawler/types/post'
 import { getThreadUniqueId } from '@/crawler/types/thread'
 import { PrismaService } from '@/prisma/prisma.service'
+import { Watcher } from '@/watcher/types/watcher'
 
 @Injectable()
 export class PostService extends EntityBaseService<'post'> {
@@ -20,9 +21,15 @@ export class PostService extends EntityBaseService<'post'> {
     super(prismaService, 'post')
   }
 
-  async upsertMany(posts: RawPost<string>[]) {
+  async upsertMany(
+    posts: RawPost<string>[],
+    attachmentWatcherMap: Record<string, Watcher[]>,
+  ) {
     for (const post of posts) {
-      await this.attachmentService.saveMany(post.attachments)
+      await this.attachmentService.saveMany(
+        post.attachments,
+        attachmentWatcherMap,
+      )
 
       const id = getPostUniqueId(post)
       const input: Omit<Prisma.PostCreateInput, 'id'> = {
