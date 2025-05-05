@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { Queue } from 'bullmq'
 import * as dayjs from 'dayjs'
+import { decode as decodeHtmlEntities } from 'html-entities'
 
 import { EntityBaseService } from '@/common/entity-base.service'
 import {
@@ -24,7 +25,7 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
   async save(attachment: RawAttachment<string>, watchers: Watcher[]) {
     const id = getAttachmentUniqueId(attachment)
     const input: Omit<Prisma.AttachmentCreateInput, 'id'> = {
-      name: attachment.name,
+      name: decodeHtmlEntities(attachment.name),
       size: attachment.size,
       width: attachment.width,
       height: attachment.height,
