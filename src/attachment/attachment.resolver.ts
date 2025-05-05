@@ -78,4 +78,9 @@ export class AttachmentResolver {
 
     return result._count
   }
+
+  @ResolveField(() => Boolean)
+  async isVideo(@Root() attachment: Attachment) {
+    return attachment.mime?.startsWith('video/') ?? false
+  }
 }
