@@ -7,6 +7,8 @@
     "source-map-support",
     "ts-loader",
     "graphql-scalars",
-    "prisma-nestjs-graphql"
+    "prisma-nestjs-graphql",
+    "@semantic-release/*",
+    "conventional-changelog-conventionalcommits"
   ]
 }
