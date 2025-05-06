@@ -4,7 +4,7 @@ WORKDIR /app
 # Install openssl, python, g++, and make for native modules
 RUN apk update && apk add nodejs npm openssl python3 g++ make py3-setuptools && rm -rf /var/cache/apk/*
 
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* prisma ./
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* prisma cabinet.config.schema.json ./
 
 RUN \
   if [ -f package-lock.json ]; then npm ci; \
@@ -40,6 +40,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 COPY --from=builder --chown=node:node /app/package.json ./
+COPY --from=builder --chown=node:node /app/cabinet.config.schema.json ./
 COPY --from=builder --chown=node:node /app/prisma ./prisma
 COPY --from=builder --chown=node:node /app/dist ./dist
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules

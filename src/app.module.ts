@@ -27,12 +27,12 @@ import '../cabinet.config.json'
       autoSchemaFile:
         process.env.NODE_ENV !== 'production'
           ? path.join(process.cwd(), '..', 'cabinet-client', 'schema.gql')
-          : false,
+          : true,
     }),
     BullModule.forRoot({
       connection: {
-        host: 'localhost',
-        port: 6379,
+        host: process.env.REDIS_HOST,
+        port: Number(process.env.REDIS_PORT),
       },
     }),
     ScheduleModule.forRoot(),
