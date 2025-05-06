@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { forwardRef, Inject, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import * as dayjs from 'dayjs'
 
@@ -15,7 +15,7 @@ import { Watcher } from '@/watcher/types/watcher'
 export class PostService extends EntityBaseService<'post'> {
   constructor(
     @Inject(PrismaService) prismaService: PrismaService,
-    @Inject(AttachmentService)
+    @Inject(forwardRef(() => AttachmentService))
     private readonly attachmentService: AttachmentService,
   ) {
     super(prismaService, 'post')
