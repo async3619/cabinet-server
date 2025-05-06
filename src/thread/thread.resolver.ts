@@ -1,6 +1,7 @@
 import { Inject } from '@nestjs/common'
 import { Args, Int, Query, ResolveField, Resolver, Root } from '@nestjs/graphql'
 
+import { AttachmentService } from '@/attachment/attachment.service'
 import {
   Attachment,
   Board,
@@ -20,6 +21,8 @@ import { ThreadService } from '@/thread/thread.service'
 export class ThreadResolver {
   constructor(
     @Inject(ThreadService) private readonly threadService: ThreadService,
+    @Inject(AttachmentService)
+    private readonly attachmentService: AttachmentService,
   ) {}
 
   @Query(() => Int)
@@ -76,6 +79,11 @@ export class ThreadResolver {
       .board()
   }
 
+  @ResolveField(() => Int)
+  async attachmentCount(@Root() thread: Thread) {
+    return this.attachmentService.countByThread(thread)
+  }
+
   @ResolveField(() => ThreadCount)
   async _count(@Root() thread: Thread): Promise<ThreadCount> {
     const result = await this.threadService.findOne({
@@ -87,6 +95,8 @@ export class ThreadResolver {
       throw new Error('Relation count aggregation failed')
     }
 
-    return result._count
+    return {
+      ...result._count,
+    }
   }
 }

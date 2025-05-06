@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq'
-import { Inject, Injectable } from '@nestjs/common'
+import { forwardRef, Inject, Injectable } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { Queue } from 'bullmq'
 import * as dayjs from 'dayjs'
@@ -10,6 +10,8 @@ import {
   getAttachmentUniqueId,
   RawAttachment,
 } from '@/crawler/types/attachment'
+import { Thread } from '@/generated/graphql'
+import { PostService } from '@/post/post.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { Watcher } from '@/watcher/types/watcher'
 
@@ -18,6 +20,8 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
   constructor(
     @Inject(PrismaService) prismaService: PrismaService,
     @InjectQueue('attachment') private readonly attachmentQueue: Queue,
+    @Inject(forwardRef(() => PostService))
+    private readonly postService: PostService,
   ) {
     super(prismaService, 'attachment')
   }
@@ -63,5 +67,22 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
         attachmentWatcherMap[getAttachmentUniqueId(attachment)],
       )
     }
+  }
+
+  async countByThread(thread: Thread) {
+    const postIds = await this.postService
+      .find({
+        select: { id: true },
+        where: { threadId: thread.id },
+      })
+      .then((posts) => posts.map(({ id }) => id))
+
+    return this.prisma.attachment.count({
+      where: {
+        posts: {
+          every: { id: { in: postIds } },
+        },
+      },
+    })
   }
 }
