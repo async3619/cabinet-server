@@ -1,0 +1,24 @@
+version: "3.3"
+
+services:
+  cabinet:
+    image: async3619/cabinet-server:latest
+    restart: always
+    ports:
+      - 3000:45000
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DATABASE_URL=file:../db/prod.db
+      - NODE_ENV=production
+    depends_on:
+      - redis
+    volumes:
+      - ./.cabinet/attachments:/app/attachments
+      - ./.cabinet/thumbnails:/app/thumbnails
+      - ./.cabinet/cabinet.config.json:/app/cabinet.config.json
+      - ./.cabinet/db:/app/db
+
+  redis:
+    image: redis
+    restart: always
