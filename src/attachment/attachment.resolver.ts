@@ -1,5 +1,6 @@
 import { Inject } from '@nestjs/common'
 import { Args, Int, Query, ResolveField, Resolver, Root } from '@nestjs/graphql'
+import { GraphQLBigInt } from 'graphql-scalars'
 
 import { AttachmentService } from '@/attachment/attachment.service'
 import {
@@ -24,7 +25,7 @@ export class AttachmentResolver {
     return this.attachmentService.count()
   }
 
-  @Query(() => Int)
+  @Query(() => GraphQLBigInt)
   async totalSize(): Promise<number> {
     const { _sum } = await this.attachmentService.aggregate({
       _sum: {
