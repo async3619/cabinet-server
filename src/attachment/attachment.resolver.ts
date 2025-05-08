@@ -24,6 +24,17 @@ export class AttachmentResolver {
     return this.attachmentService.count()
   }
 
+  @Query(() => Int)
+  async totalSize(): Promise<number> {
+    const { _sum } = await this.attachmentService.aggregate({
+      _sum: {
+        size: true,
+      },
+    })
+
+    return _sum.size ?? 0
+  }
+
   @Query(() => Attachment)
   async attachment(
     @Args() args: FindFirstAttachmentArgs,
