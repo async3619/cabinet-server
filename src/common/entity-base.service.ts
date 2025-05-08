@@ -41,6 +41,10 @@ export abstract class EntityBaseService<
     return this.delegate.count.bind(this.delegate)
   }
 
+  get aggregate(): TEntityDelegate['aggregate'] {
+    return this.delegate.aggregate.bind(this.delegate)
+  }
+
   get find(): TEntityDelegate['findMany'] {
     return this.delegate.findMany.bind(this.delegate)
   }
