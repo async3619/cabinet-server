@@ -109,7 +109,7 @@ model Statistic {
   threadCount     Int
   postCount       Int
   attachmentCount Int
-  totalSize       Int
+  totalSize       BigInt
 
   createdAt DateTime @default(now())
 }
