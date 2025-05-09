@@ -5,7 +5,7 @@ import { GraphQLBigInt } from 'graphql-scalars'
 import { FindManyStatisticArgs, Statistic } from '@/generated/graphql'
 import { StatisticService } from '@/statistic/statistic.service'
 
-@Resolver()
+@Resolver(() => Statistic)
 export class StatisticResolver {
   constructor(
     @Inject(StatisticService)
