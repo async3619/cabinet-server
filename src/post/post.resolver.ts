@@ -3,8 +3,8 @@ import { Args, Int, Query, ResolveField, Resolver, Root } from '@nestjs/graphql'
 import {
   Attachment,
   Board,
-  FindFirstPostArgs,
   FindManyPostArgs,
+  FindUniquePostArgs,
   Post,
   PostCount,
   Thread,
@@ -21,7 +21,7 @@ export class PostResolver {
   }
 
   @Query(() => Post)
-  async post(@Args() args: FindFirstPostArgs): Promise<Post | null> {
+  async post(@Args() args: FindUniquePostArgs): Promise<Post | null> {
     return this.postService.findOne(args)
   }
 

@@ -5,11 +5,11 @@ import { AttachmentService } from '@/attachment/attachment.service'
 import {
   Attachment,
   Board,
-  FindFirstThreadArgs,
   FindManyAttachmentArgs,
   FindManyPostArgs,
   FindManyThreadArgs,
   FindManyWatcherArgs,
+  FindUniqueThreadArgs,
   Post,
   Thread,
   ThreadCount,
@@ -31,7 +31,7 @@ export class ThreadResolver {
   }
 
   @Query(() => Thread, { nullable: true })
-  async thread(@Args() args: FindFirstThreadArgs): Promise<Thread | null> {
+  async thread(@Args() args: FindUniqueThreadArgs): Promise<Thread | null> {
     return this.threadService.findOne(args)
   }
 

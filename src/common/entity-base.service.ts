@@ -49,8 +49,8 @@ export abstract class EntityBaseService<
     return this.delegate.findMany.bind(this.delegate)
   }
 
-  get findOne(): TEntityDelegate['findFirst'] {
-    return this.delegate.findFirst.bind(this.delegate)
+  get findOne(): TEntityDelegate['findUnique'] {
+    return this.delegate.findUnique.bind(this.delegate)
   }
 
   get update(): TEntityDelegate['update'] {
