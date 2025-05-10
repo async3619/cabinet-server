@@ -67,7 +67,7 @@ export class HTTPClient<TEndpoints extends Endpoints> {
     return url.toString() + (queryParams ? `?${queryParams.toString()}` : '')
   }
 
-  private fetch(
+  private async fetch(
     path: string,
     options: RequestInit,
     pathParams: Record<string, string> = {},
@@ -91,17 +91,26 @@ export class HTTPClient<TEndpoints extends Endpoints> {
       }
     }
 
-    return fetch(this.getUrlOf(path, pathParams, queryParams), options).then(
-      (res) => {
-        if (res.ok) {
-          return res
-        } else {
-          return res.json().then((json) => {
-            throw new HttpRequestError(res.status, json.message)
-          })
-        }
-      },
+    const res = await fetch(
+      this.getUrlOf(path, pathParams, queryParams),
+      options,
     )
+
+    if (res.ok) {
+      return res
+    } else {
+      const body = await res.text()
+      try {
+        JSON.parse(body)
+      } catch {
+        throw new HttpRequestError(
+          res.status,
+          body || `${res.status} ${res.statusText}`,
+        )
+      }
+
+      throw new HttpRequestError(res.status, JSON.parse(body).message)
+    }
   }
 
   get<TPath extends RemoveMethodFromPath<GetEndpointPathsFrom<TEndpoints>>>(
