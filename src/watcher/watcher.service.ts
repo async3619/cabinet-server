@@ -102,4 +102,33 @@ export class WatcherService
 
     return watcher
   }
+
+  async excludeThreadFromWatcher(threadId: string, watcherId: number) {
+    const watcher = await this.prisma.watcher.findUnique({
+      where: { id: watcherId },
+      include: { threads: true },
+    })
+
+    if (!watcher) {
+      throw new Error(`Watcher with id '${watcherId}' not found`)
+    }
+
+    const thread = watcher.threads.find((thread) => thread.id === threadId)
+    if (!thread) {
+      throw new Error(`Thread with id '${threadId}' not found in watcher`)
+    }
+
+    await this.prisma.excludedThread.create({
+      data: {
+        threadId,
+        watcher: {
+          connect: {
+            id: watcherId,
+          },
+        },
+      },
+    })
+
+    return true
+  }
 }
