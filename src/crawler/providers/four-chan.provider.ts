@@ -116,4 +116,57 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
           : [],
     }))
   }
+
+  async getThreadFromId(
+    threadId: number,
+    board: RawBoard<'four-chan'>,
+  ): Promise<RawThread<'four-chan'>> {
+    const { posts } = await this.fetcher.get('/:code/thread/:no.json', {
+      params: {
+        code: board.code,
+        no: threadId.toString(),
+      },
+    })
+
+    const rawThread = posts[0]
+    return {
+      board,
+      no: rawThread.no,
+      title: rawThread.sub,
+      content: rawThread.com,
+      author: rawThread.name,
+      createdAt: rawThread.time,
+      attachments:
+        'md5' in rawThread
+          ? [
+              {
+                board,
+                name: rawThread.filename,
+                width: rawThread.w,
+                height: rawThread.h,
+                extension: rawThread.ext,
+                hash: rawThread.md5,
+                createdAt: rawThread.tim,
+                size: rawThread.fsize,
+                url: `https://i.4cdn.org/${board.code}/${rawThread.tim}${rawThread.ext}`,
+                thumbnail: {
+                  board,
+                  name: `${rawThread.tim}s`,
+                  extension: '.jpg',
+                  width: rawThread.tn_w,
+                  height: rawThread.tn_h,
+                  createdAt: rawThread.tim,
+                  url: `https://i.4cdn.org/${board.code}/${rawThread.tim}s.jpg`,
+                },
+              } satisfies RawAttachment<'four-chan'>,
+            ]
+          : [],
+    }
+  }
+
+  async getArchivedThreadIds(board: RawBoard<'four-chan'>): Promise<number[]> {
+    return this.fetcher.get(`/:code/archive.json`, {
+      params: { code: board.code },
+    })
+  }
 }

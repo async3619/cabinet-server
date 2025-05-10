@@ -109,6 +109,7 @@ interface FourChanPostsResponse {
 }
 
 export interface FourChanAPIEndpoints extends Endpoints {
+  'GET /:code/archive.json': Route<number[]>
   'GET /:code/catalog.json': Route<FourChanCatalogResponse[]>
   'GET /:code/thread/:no.json': Route<FourChanPostsResponse>
   'GET /boards.json': Route<FourChanBoardsResponse>

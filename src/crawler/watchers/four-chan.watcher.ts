@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common'
 import * as _ from 'lodash'
 
 import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
@@ -16,6 +17,7 @@ interface FourChanWatcherEntry {
   boards: string[]
   caseInsensitive?: boolean
   queries: string[]
+  searchArchive?: boolean
   target: 'title' | 'content' | 'both'
 }
 
@@ -29,6 +31,7 @@ export class FourChanWatcher extends BaseWatcher<
   'four-chan',
   FourChanWatcherOptions
 > {
+  private readonly logger = new Logger(FourChanWatcher.name)
   private readonly provider: FourChanProvider
 
   static checkIfMatched(options: FourChanWatcherOptions, thread: Thread) {
@@ -85,15 +88,57 @@ export class FourChanWatcher extends BaseWatcher<
       }
     }
 
+    const archivedThreadMap: Record<string, RawThread<'four-chan'>> = {}
+    const allSearchArchiveTargetBoards = _.chain(this.config.entries)
+      .filter((entry) => entry.searchArchive ?? false)
+      .flatMap((entry) => entry.boards)
+      .uniq()
+      .value()
+
+    for (const boardCode of allSearchArchiveTargetBoards) {
+      const board = boards.find((board) => board.code === boardCode)
+      if (!board) {
+        throw new Error(`Could not find board for search archive: ${boardCode}`)
+      }
+
+      const threadIds = await this.provider.getArchivedThreadIds(board)
+      for (const threadId of threadIds) {
+        try {
+          const thread = await this.provider.getThreadFromId(threadId, board)
+          if (!thread) {
+            throw new Error(
+              `Could not find thread for search archive: ${threadId}`,
+            )
+          }
+
+          archivedThreadMap[getThreadUniqueId(thread)] = thread
+        } catch (e) {
+          this.logger.error(
+            `Failed to get archived thread ${threadId} from board ${boardCode}: ${e}`,
+          )
+        }
+      }
+    }
+
     const entryThreadPairs = _.chain(this.config.entries)
       .map(
         (entry) =>
           [
             entry,
-            _.chain(threadMap)
-              .values()
-              .filter((thread) => entry.boards.includes(thread.board.code))
-              .value(),
+            [
+              ..._.chain(threadMap)
+                .values()
+                .filter((thread) => entry.boards.includes(thread.board.code))
+                .value(),
+              ..._.chain(archivedThreadMap)
+                .values()
+                .filter(
+                  (thread) =>
+                    (entry.searchArchive ?? false) &&
+                    entry.boards.includes(thread.board.code),
+                )
+                .value(),
+            ],
           ] as const,
       )
       .value()
