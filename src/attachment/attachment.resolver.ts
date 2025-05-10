@@ -6,8 +6,8 @@ import { AttachmentService } from '@/attachment/attachment.service'
 import {
   Attachment,
   AttachmentCount,
-  FindFirstAttachmentArgs,
   FindManyAttachmentArgs,
+  FindUniqueAttachmentArgs,
   Post,
   Thread,
   Watcher,
@@ -38,7 +38,7 @@ export class AttachmentResolver {
 
   @Query(() => Attachment)
   async attachment(
-    @Args() args: FindFirstAttachmentArgs,
+    @Args() args: FindUniqueAttachmentArgs,
   ): Promise<Attachment | null> {
     return this.attachmentService.findOne(args)
   }

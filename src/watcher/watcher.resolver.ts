@@ -3,10 +3,10 @@ import { Resolver, Query, Args, ResolveField, Root, Int } from '@nestjs/graphql'
 
 import {
   Attachment,
-  FindFirstWatcherArgs,
   FindManyAttachmentArgs,
   FindManyThreadArgs,
   FindManyWatcherArgs,
+  FindUniqueWatcherArgs,
   Thread,
   Watcher,
   WatcherCount,
@@ -25,7 +25,7 @@ export class WatcherResolver {
   }
 
   @Query(() => Watcher, { nullable: true })
-  async watcher(@Args() args: FindFirstWatcherArgs): Promise<Watcher | null> {
+  async watcher(@Args() args: FindUniqueWatcherArgs): Promise<Watcher | null> {
     return this.watcherService.findOne(args)
   }
 

@@ -5,8 +5,8 @@ import { BoardService } from '@/board/board.service'
 import {
   Board,
   BoardCount,
-  FindFirstBoardArgs,
   FindManyBoardArgs,
+  FindUniqueBoardArgs,
   Post,
   Thread,
 } from '@/generated/graphql'
@@ -23,7 +23,7 @@ export class BoardResolver {
   }
 
   @Query(() => Board)
-  async board(@Args() args: FindFirstBoardArgs): Promise<Board | null> {
+  async board(@Args() args: FindUniqueBoardArgs): Promise<Board | null> {
     return this.boardService.findOne(args)
   }
 
