@@ -118,6 +118,19 @@ export class WatcherService
       throw new Error(`Thread with id '${threadId}' not found in watcher`)
     }
 
+    const entity = await this.prisma.excludedThread.findFirst({
+      where: {
+        threadId,
+        watcherId,
+      },
+    })
+
+    if (entity) {
+      throw new Error(
+        `Thread with id '${threadId}' already excluded from watcher '${watcher.name}'`,
+      )
+    }
+
     await this.prisma.excludedThread.create({
       data: {
         threadId,
