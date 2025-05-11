@@ -45,7 +45,7 @@ export class WatcherResolver {
   @Mutation(() => Boolean)
   async excludeThreadFromWatcher(
     @Args('threadId', { type: () => String }) threadId: string,
-    @Args('watcherId', { type: () => String }) watcherId: number,
+    @Args('watcherId', { type: () => Int }) watcherId: number,
   ): Promise<boolean> {
     return this.watcherService.excludeThreadFromWatcher(threadId, watcherId)
   }
