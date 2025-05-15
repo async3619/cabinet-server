@@ -51,28 +51,17 @@ export class AttachmentProcessor extends WorkerHost {
       where: { id: uniqueId },
     })
 
-    if (!entity) {
-      return true
-    }
-
-    if (
-      attachment.thumbnail?.url &&
-      (!entity?.thumbnailFilePath || !fs.existsSync(entity.thumbnailFilePath))
-    ) {
-      return true
-    }
-
-    if (!entity.filePath || !fs.existsSync(entity.filePath)) {
-      return true
-    }
-
-    if (entity.size !== attachment.size) {
-      return true
-    } else if (entity.filePath) {
-      const fileStat = await fs.stat(entity.filePath)
-      if (fileStat.size !== attachment.size) {
+    if (attachment.thumbnail?.url) {
+      if (
+        !entity?.thumbnailFilePath ||
+        !fs.existsSync(entity.thumbnailFilePath)
+      ) {
         return true
       }
+    }
+
+    if (!entity?.filePath || !fs.existsSync(entity.filePath)) {
+      return true
     }
 
     if (hashCheck) {
