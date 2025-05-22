@@ -261,6 +261,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     const archivedThreads = await this.threadService.find({
       where: { isArchived: true },
       include: {
+        watcherThreads: true,
         board: true,
         attachments: {
           include: {
@@ -282,12 +283,15 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     })
 
     const obsoleteThreads = archivedThreads.filter((thread) => {
-      return this.watchers.some((watcher) => {
-        return !WATCHER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
-          watcher.config,
-          thread,
-        )
-      })
+      return (
+        thread.watcherThreads.length < 0 &&
+        this.watchers.some((watcher) => {
+          return !WATCHER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
+            watcher.config,
+            thread,
+          )
+        })
+      )
     })
 
     const obsoletePosts = _.chain(obsoleteThreads).flatMap('posts').value()
