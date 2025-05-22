@@ -17,9 +17,17 @@ import { md5 } from '@/utils/hash'
 import { mimeType } from '@/utils/mimetype'
 import { sleep } from '@/utils/sleep'
 
-interface AttachmentProcessorJobData {
+interface DownloadJobData {
   attachment: RawAttachment<string>
+  type: 'download'
 }
+
+interface DeletionJobData {
+  attachmentId: string
+  type: 'deletion'
+}
+
+export type AttachmentJobData = DownloadJobData | DeletionJobData
 
 @Processor('attachment')
 export class AttachmentProcessor extends WorkerHost {
@@ -78,9 +86,13 @@ export class AttachmentProcessor extends WorkerHost {
     return false
   }
 
-  private async processDownload(
-    job: Job<AttachmentProcessorJobData>,
-  ): Promise<void> {
+  private async processDownload(job: Job<AttachmentJobData>): Promise<void> {
+    if (job.data.type !== 'download') {
+      throw new Error(
+        `Job type mismatch: expected 'download', got '${job.data.type}'`,
+      )
+    }
+
     const { attachment } = job.data
     const uniqueId = getAttachmentUniqueId(attachment)
     const { downloadThrottle, thumbnailPath, downloadPath } =
@@ -155,15 +167,50 @@ export class AttachmentProcessor extends WorkerHost {
     }
   }
 
+  private async processDeletion(job: Job<AttachmentJobData>): Promise<void> {
+    if (job.data.type !== 'deletion') {
+      throw new Error(
+        `Job type mismatch: expected 'deletion', got '${job.data.type}'`,
+      )
+    }
+
+    const { attachmentId: id } = job.data
+    const entity = await this.attachmentService.findOne({ where: { id } })
+    if (!entity) {
+      return
+    }
+
+    if (entity.filePath && fs.existsSync(entity.filePath)) {
+      await fs.remove(entity.filePath)
+    }
+
+    if (entity.thumbnailFilePath && fs.existsSync(entity.thumbnailFilePath)) {
+      await fs.remove(entity.thumbnailFilePath)
+    }
+
+    await this.attachmentService.delete({ where: { id } })
+
+    this.logger.log(`Successfully deleted attachment: ${id}`)
+  }
+
   @OnWorkerEvent('failed')
-  onError(job: Job<AttachmentProcessorJobData>, error: Error) {
+  onError(job: Job<AttachmentJobData>, error: Error) {
     this.logger.error('Attachment processing task was failed by error: ')
     this.logger.error(error)
   }
 
-  async process(job: Job<AttachmentProcessorJobData>): Promise<any> {
-    if (job.name === 'download') {
-      await this.processDownload(job)
+  async process(job: Job<AttachmentJobData>): Promise<any> {
+    switch (job.name) {
+      case 'download':
+        await this.processDownload(job)
+        break
+
+      case 'deletion':
+        await this.processDeletion(job)
+        break
+
+      default:
+        throw new Error(`Unsupported job: ${job.name}`)
     }
   }
 }
