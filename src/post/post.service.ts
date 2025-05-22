@@ -25,6 +25,8 @@ export class PostService extends EntityBaseService<'post'> {
     posts: RawPost<string>[],
     attachmentWatcherMap: Record<string, Watcher[]>,
   ) {
+    const threadBumpedAtMap: Record<string, number> = {}
+
     for (const post of posts) {
       await this.attachmentService.saveMany(
         post.attachments,
@@ -51,10 +53,28 @@ export class PostService extends EntityBaseService<'post'> {
         },
       }
 
+      if (post.thread) {
+        const threadId = getThreadUniqueId(post.thread)
+
+        threadBumpedAtMap[threadId] = Math.max(
+          threadBumpedAtMap[threadId] ?? 0,
+          post.createdAt,
+        )
+      }
+
       await this.prisma.post.upsert({
         where: { id },
         update: { ...input },
         create: { id, ...input },
+      })
+    }
+
+    for (const [threadId, bumpedAt] of Object.entries(threadBumpedAtMap)) {
+      await this.prisma.thread.update({
+        where: { id: threadId },
+        data: {
+          bumpedAt: dayjs.unix(bumpedAt).toDate(),
+        },
       })
     }
   }
