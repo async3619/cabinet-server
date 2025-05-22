@@ -107,29 +107,33 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
     const crawlInterval = this.configService.crawlInterval
     if (typeof crawlInterval === 'string') {
-      const job = new CronJob(crawlInterval, this.doCrawling.bind(this))
+      const job = new CronJob(crawlInterval, this.doCrawl.bind(this))
       this.schedulerRegistry.addCronJob(CRAWLER_TASK_NAME, job)
       job.start()
     } else {
       const crawlingTimeoutFn = async () => {
         this.schedulerRegistry.deleteTimeout(CRAWLER_TASK_NAME)
-        await this.doCrawling()
+        await this.doCrawl()
         const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
         this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
       }
 
-      this.doCrawling().then(() => {
+      this.doCrawl().then(() => {
         const timeout = setTimeout(crawlingTimeoutFn, crawlInterval)
         this.schedulerRegistry.addTimeout(CRAWLER_TASK_NAME, timeout)
       })
     }
   }
 
-  private async doCrawling(): Promise<void> {
+  private async doCrawl(): Promise<void> {
     this.crawlingPromise = (async () => {
       this.logger.log(
         `Starting crawling task for ${this.watchers.length} watchers`,
       )
+
+      await this.threadService.updateMany({
+        data: { isArchived: true },
+      })
 
       const [elapsedTime, { posts, threads, boards, attachments }] =
         await stopwatch(async () => {
