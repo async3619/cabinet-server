@@ -32,11 +32,14 @@ export class EventEmitter<TEventMap extends EventMap> {
     this.on(event, wrappedListener)
   }
 
-  emit<K extends keyof TEventMap>(event: K, ...args: Parameters<TEventMap[K]>) {
+  async emit<K extends keyof TEventMap>(
+    event: K,
+    ...args: Parameters<TEventMap[K]>
+  ) {
     const listeners = this.listeners[event]
     if (listeners) {
       for (const listener of listeners) {
-        listener(...args)
+        await listener(...args)
       }
     }
   }
