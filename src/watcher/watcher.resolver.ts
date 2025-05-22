@@ -1,5 +1,13 @@
 import { Inject } from '@nestjs/common'
-import { Resolver, Query, Args, ResolveField, Root, Int } from '@nestjs/graphql'
+import {
+  Resolver,
+  Query,
+  Args,
+  ResolveField,
+  Root,
+  Int,
+  Mutation,
+} from '@nestjs/graphql'
 
 import {
   Attachment,
@@ -32,6 +40,14 @@ export class WatcherResolver {
   @Query(() => [Watcher])
   async watchers(@Args() args: FindManyWatcherArgs): Promise<Watcher[]> {
     return this.watcherService.find(args)
+  }
+
+  @Mutation(() => Boolean)
+  async excludeThreadFromWatcher(
+    @Args('threadId', { type: () => String }) threadId: string,
+    @Args('watcherId', { type: () => Int }) watcherId: number,
+  ): Promise<boolean> {
+    return this.watcherService.excludeThreadFromWatcher(threadId, watcherId)
   }
 
   @ResolveField(() => [Thread])
