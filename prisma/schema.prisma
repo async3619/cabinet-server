@@ -43,7 +43,7 @@ model Thread {
   title     String?
   content   String?
   createdAt DateTime
-  bumpedAt  DateTime @default(dbgenerated("'1970-01-01'"))
+  bumpedAt  DateTime?
 
   watchers    Watcher[]
   attachments Attachment[]
