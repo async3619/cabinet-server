@@ -38,6 +38,10 @@ export class FourChanWatcher extends BaseWatcher<
 > {
   private readonly logger = new Logger(FourChanWatcher.name)
   private readonly provider: FourChanProvider
+  private readonly archivedThreadCache = new Map<
+    number,
+    RawThread<'four-chan'>
+  >()
 
   static checkIfMatched(options: FourChanWatcherOptions, thread: Thread) {
     if (!thread.board) {
@@ -177,7 +181,14 @@ export class FourChanWatcher extends BaseWatcher<
       const threadIds = await this.provider.getArchivedThreadIds(board)
       for (const threadId of threadIds) {
         try {
-          const thread = await this.provider.getThreadFromId(threadId, board)
+          let thread = this.archivedThreadCache.get(threadId)
+          if (!thread) {
+            thread = await this.provider.getThreadFromId(threadId, board)
+            if (thread) {
+              this.archivedThreadCache.set(threadId, thread)
+            }
+          }
+
           if (!thread) {
             throw new Error(
               `Could not find thread for search archive: ${threadId}`,
