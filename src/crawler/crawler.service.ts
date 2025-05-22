@@ -40,6 +40,11 @@ export class CrawlerService implements OnModuleInit {
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
 
+  async onModuleInit() {
+    await this.createWatchers()
+    await this.initializeSchedulers()
+  }
+
   private async createWatchers(): Promise<void> {
     const watcherTypes = Object.keys(
       this.configService.config.watchers,
@@ -194,10 +199,5 @@ export class CrawlerService implements OnModuleInit {
     this.logger.log(
       `This crawling task took ${chalk.blue(prettyMilliseconds(elapsedTime, { verbose: true }))}`,
     )
-  }
-
-  async onModuleInit() {
-    await this.createWatchers()
-    await this.initializeSchedulers()
   }
 }
