@@ -30,6 +30,7 @@ export type ConfigData = {
     thumbnailPath: string
   }
   crawling: {
+    deleteObsolete?: boolean
     interval: number | string
   }
   watchers: {
@@ -62,8 +63,11 @@ export class ConfigService
     return this.config.attachment
   }
 
-  get crawlInterval(): number | string {
-    return this.config.crawling.interval
+  get crawling() {
+    return {
+      deleteObsolete: false,
+      ...this.config.crawling,
+    }
   }
 
   get config() {

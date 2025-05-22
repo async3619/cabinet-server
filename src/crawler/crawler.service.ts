@@ -105,7 +105,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       this.schedulerRegistry.deleteTimeout(CRAWLER_TASK_NAME)
     }
 
-    const crawlInterval = this.configService.crawlInterval
+    const crawlInterval = this.configService.crawling.interval
     if (typeof crawlInterval === 'string') {
       const job = new CronJob(crawlInterval, this.doCrawl.bind(this))
       this.schedulerRegistry.addCronJob(CRAWLER_TASK_NAME, job)
