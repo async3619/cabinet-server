@@ -65,6 +65,10 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     this.configService.off('change', this.handleConfigChange)
   }
 
+  getCrawlerByWatcher(watcher: Watcher) {
+    return this.watchers.find((item) => item.entity.id === watcher.id) ?? null
+  }
+
   private async createWatchers(): Promise<void> {
     this.watchers.length = 0
 
@@ -149,7 +153,11 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
           const attachmentWatcherMap: Record<string, Watcher[]> = {}
 
           for (const watcher of this.watchers) {
-            const result = await watcher.watch()
+            const watcherThreads = await this.watcherService.getWatcherThreads(
+              watcher.entity,
+            )
+
+            const result = await watcher.watch(watcherThreads)
 
             for (const thread of result.threads) {
               const id = getThreadUniqueId(thread)
