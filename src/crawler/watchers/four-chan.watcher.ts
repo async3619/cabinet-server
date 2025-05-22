@@ -5,6 +5,7 @@ import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
 import { getThreadUniqueId } from '@/crawler/types/thread'
+import type { WatcherThread } from '@/crawler/types/watcher-thread'
 import type {
   BaseWatcherOptions,
   WatcherResult,
@@ -25,6 +26,10 @@ export interface FourChanWatcherOptions
   extends BaseWatcherOptions<'four-chan'> {
   endpoint: string
   entries: FourChanWatcherEntry[]
+}
+
+const ENDPOINT_PATHNAME_REGEX_MAP = {
+  'a.4cdn.org': /^\/([a-z0-9]*?)\/thread\/(\d+)$/,
 }
 
 export class FourChanWatcher extends BaseWatcher<
@@ -68,7 +73,75 @@ export class FourChanWatcher extends BaseWatcher<
     this.provider = new FourChanProvider(options)
   }
 
-  async watch(): Promise<WatcherResult> {
+  private parseWatcherThreadUrl(url: string) {
+    const endpointUrl = new URL(this.config.endpoint)
+    const targetUrl = new URL(url)
+
+    for (const [hostname, regex] of Object.entries(
+      ENDPOINT_PATHNAME_REGEX_MAP,
+    )) {
+      if (endpointUrl.hostname !== hostname) {
+        continue
+      }
+
+      const result = regex.exec(targetUrl.pathname)
+      if (!result) {
+        continue
+      }
+
+      const boardCode = result[1]
+      const threadId = Number(result[2])
+      if (isNaN(threadId)) {
+        this.logger.warn(`Invalid thread ID: ${result[2]}`)
+        return null
+      }
+
+      return {
+        boardCode,
+        threadId,
+      }
+    }
+
+    return null
+  }
+
+  async watch(watcherThreads: WatcherThread[]): Promise<WatcherResult> {
+    const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
+    const watcherThreadMap: Record<number, string> = {}
+    const allBoards = await this.provider.getAllBoards()
+
+    if (watcherThreads.length > 0) {
+      for (const watcherThread of watcherThreads) {
+        const { url } = watcherThread
+        const threadData = this.parseWatcherThreadUrl(url)
+        if (!threadData) {
+          this.logger.warn(`Failed to parse watcher thread URL: ${url}`)
+          continue
+        }
+
+        const { boardCode, threadId } = threadData
+        const board = allBoards.find((board) => board.code === boardCode)
+        if (!board) {
+          this.logger.warn(
+            `Failed to find board for watcher thread: /${boardCode}/ (${url})`,
+          )
+          continue
+        }
+
+        const thread = await this.provider.getThreadFromId(threadId, board)
+        if (!thread) {
+          this.logger.warn(
+            `Failed to find thread for watcher thread: ${threadId} (${url})`,
+          )
+          continue
+        }
+
+        const uniqueId = getThreadUniqueId(thread)
+        matchedThreads[uniqueId] = thread
+        watcherThreadMap[watcherThread.id] = uniqueId
+      }
+    }
+
     const validBoardCodes = _.chain(this.config.entries)
       .flatMap((entry) => entry.boards)
       .uniq()
@@ -76,10 +149,10 @@ export class FourChanWatcher extends BaseWatcher<
       .fromPairs()
       .value()
 
-    const boards = await this.provider
-      .getAllBoards()
-      .then((boards) => boards.filter((board) => validBoardCodes[board.code]))
-
+    const boards = [
+      ...allBoards.filter((board) => validBoardCodes[board.code]),
+      ..._.chain(matchedThreads).values().map('board').value(),
+    ]
     const threadMap: Record<string, RawThread<'four-chan'>> = {}
     for (const board of boards) {
       const threads = await this.provider.getThreadsFromBoard(board)
@@ -143,7 +216,6 @@ export class FourChanWatcher extends BaseWatcher<
       )
       .value()
 
-    const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
     for (const [entry, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
         const { target, caseInsensitive } = entry
@@ -184,6 +256,27 @@ export class FourChanWatcher extends BaseWatcher<
       boards,
       posts,
       threads: targetThreads,
+      watcherThreadIdMap: watcherThreadMap,
     }
+  }
+
+  getActualUrl(url: string) {
+    const endpointUrl = new URL(this.config.endpoint)
+    const targetUrl = new URL(url)
+
+    for (const [hostname, regex] of Object.entries(
+      ENDPOINT_PATHNAME_REGEX_MAP,
+    )) {
+      if (endpointUrl.hostname !== hostname) {
+        continue
+      }
+
+      if (regex.test(targetUrl.pathname)) {
+        targetUrl.search = ''
+        return targetUrl.toString()
+      }
+    }
+
+    return null
   }
 }

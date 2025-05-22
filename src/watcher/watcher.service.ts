@@ -1,4 +1,5 @@
 import {
+  forwardRef,
   Inject,
   Injectable,
   Logger,
@@ -10,7 +11,9 @@ import prettyMilliseconds from 'pretty-ms'
 
 import { EntityBaseService } from '@/common/entity-base.service'
 import { ConfigService } from '@/config/config.service'
+import { CrawlerService } from '@/crawler/crawler.service'
 import { WATCHER_CONSTRUCTOR_MAP } from '@/crawler/watchers'
+import { Watcher } from '@/generated/graphql'
 import { PrismaService } from '@/prisma/prisma.service'
 import { ThreadService } from '@/thread/thread.service'
 import { stopwatch } from '@/utils/stopwatch'
@@ -26,6 +29,8 @@ export class WatcherService
     @Inject(PrismaService) prismaService: PrismaService,
     @Inject(ConfigService) private readonly configService: ConfigService,
     @Inject(ThreadService) private readonly threadService: ThreadService,
+    @Inject(forwardRef(() => CrawlerService))
+    private readonly crawlerService: CrawlerService,
   ) {
     super(prismaService, 'watcher')
   }
@@ -65,8 +70,6 @@ export class WatcherService
   }
 
   private async initializeWatchers() {
-    await this.prisma.watcher.deleteMany()
-
     const watcherMap = _.chain(this.configService.config.watchers)
       .values()
       .flatten()
@@ -103,6 +106,17 @@ export class WatcherService
     })
 
     for (const watcher of watchers) {
+      const watcherEntity = await this.prisma.watcher.findFirst({
+        where: { name: watcher.name },
+      })
+
+      if (watcherEntity) {
+        this.logger.warn(
+          `Watcher '${watcher.name}' already exists, skipping...`,
+        )
+        continue
+      }
+
       const matchedThreads = threads.filter((thread) =>
         WATCHER_CONSTRUCTOR_MAP[watcher.type].checkIfMatched(watcher, thread),
       )
@@ -118,17 +132,107 @@ export class WatcherService
         .uniqBy('id')
         .value()
 
-      await this.prisma.watcher.create({
-        data: {
-          name: watcher.name,
-          type: watcher.type,
-          attachments: {
-            connect: attachments.map((attachment) => ({
-              id: attachment.id,
-            })),
+      if (!watcherEntity) {
+        await this.prisma.watcher.create({
+          data: {
+            name: watcher.name,
+            type: watcher.type,
+            attachments: {
+              connect: attachments.map((attachment) => ({
+                id: attachment.id,
+              })),
+            },
+            threads: {
+              connect: matchedThreads.map((thread) => ({ id: thread.id })),
+            },
           },
-          threads: {
-            connect: matchedThreads.map((thread) => ({ id: thread.id })),
+        })
+      }
+    }
+  }
+
+  async registerThread(url: string, watcherId: number) {
+    const watcher = await this.prisma.watcher.findUnique({
+      where: { id: watcherId },
+    })
+
+    if (!watcher) {
+      throw new Error(`Watcher with ID '${watcherId}' not found`)
+    }
+
+    const crawler = this.crawlerService.getCrawlerByWatcher(watcher)
+    if (!crawler) {
+      throw new Error(
+        `Crawler for watcher '${watcher.name}' not found. Please check your configuration.`,
+      )
+    }
+
+    const actualUrl = crawler.getActualUrl(url)
+    if (!actualUrl) {
+      throw new Error(
+        `URL '${url}' does not match the crawler '${watcher.name}' configuration.`,
+      )
+    }
+
+    const count = await this.prisma.watcherThread.count({
+      where: { url: actualUrl, watcherId },
+    })
+
+    if (count > 0) {
+      throw new Error(
+        `Thread with URL '${actualUrl}' already registered for watcher '${watcher.name}'.`,
+      )
+    }
+
+    await this.prisma.watcherThread.create({
+      data: {
+        url: actualUrl,
+        watcher: {
+          connect: { id: watcherId },
+        },
+      },
+    })
+
+    return true
+  }
+
+  getWatcherThreads(entity: Watcher) {
+    return this.prisma.watcherThread.findMany({
+      where: { watcherId: entity.id },
+    })
+  }
+
+  async connectWatcherThreads(watcherThreadIdMap: Record<number, string>) {
+    for (const [watcherThreadId, threadId] of Object.entries(
+      watcherThreadIdMap,
+    )) {
+      const watcherThread = await this.prisma.watcherThread.findUnique({
+        where: { id: Number(watcherThreadId) },
+      })
+
+      if (!watcherThread) {
+        this.logger.warn(
+          `Watcher thread with ID '${watcherThreadId}' not found. Skipping connection.`,
+        )
+        continue
+      }
+
+      const thread = await this.prisma.thread.findUnique({
+        where: { id: threadId },
+      })
+
+      if (!thread) {
+        this.logger.warn(
+          `Thread with ID '${threadId}' not found. Skipping connection.`,
+        )
+        continue
+      }
+
+      await this.prisma.watcherThread.update({
+        where: { id: watcherThread.id },
+        data: {
+          thread: {
+            connect: { id: thread.id },
           },
         },
       })

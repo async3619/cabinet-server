@@ -18,5 +18,6 @@ import { WatcherModule } from '@/watcher/watcher.module'
     AttachmentModule,
   ],
   providers: [CrawlerService],
+  exports: [CrawlerService],
 })
 export class CrawlerModule {}
