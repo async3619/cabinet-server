@@ -1,17 +1,27 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common'
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common'
 import * as _ from 'lodash'
+import prettyMilliseconds from 'pretty-ms'
 
 import { EntityBaseService } from '@/common/entity-base.service'
 import { ConfigService } from '@/config/config.service'
 import { WATCHER_CONSTRUCTOR_MAP } from '@/crawler/watchers'
 import { PrismaService } from '@/prisma/prisma.service'
 import { ThreadService } from '@/thread/thread.service'
+import { stopwatch } from '@/utils/stopwatch'
 
 @Injectable()
 export class WatcherService
   extends EntityBaseService<'watcher'>
-  implements OnModuleInit
+  implements OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(WatcherService.name)
+
   constructor(
     @Inject(PrismaService) prismaService: PrismaService,
     @Inject(ConfigService) private readonly configService: ConfigService,
@@ -21,6 +31,40 @@ export class WatcherService
   }
 
   async onModuleInit() {
+    await this.initializeWatchers()
+
+    this.configService.on('change', this.handleConfigChange)
+  }
+
+  async onModuleDestroy() {
+    this.configService.off('change', this.handleConfigChange)
+  }
+
+  async findByName(name: string) {
+    const watcher = await this.prisma.watcher.findFirst({
+      where: { name },
+    })
+
+    if (!watcher) {
+      throw new Error(`Watcher with name '${name}' not found`)
+    }
+
+    return watcher
+  }
+
+  private handleConfigChange = async () => {
+    this.logger.warn('Server configuration changed, reinitializing watchers...')
+
+    const [elapsedTime] = await stopwatch(async () => {
+      await this.initializeWatchers()
+    })
+
+    this.logger.log(
+      `Watchers reinitialized successfully. (${prettyMilliseconds(elapsedTime, { verbose: true })})`,
+    )
+  }
+
+  private async initializeWatchers() {
     await this.prisma.watcher.deleteMany()
 
     const watcherMap = _.chain(this.configService.config.watchers)
@@ -89,17 +133,5 @@ export class WatcherService
         },
       })
     }
-  }
-
-  async findByName(name: string) {
-    const watcher = await this.prisma.watcher.findFirst({
-      where: { name },
-    })
-
-    if (!watcher) {
-      throw new Error(`Watcher with name '${name}' not found`)
-    }
-
-    return watcher
   }
 }

@@ -31,6 +31,7 @@
     "better-ajv-errors": "^1.2.0",
     "bullmq": "^5.52.1",
     "chalk": "^5.4.1",
+    "chokidar": "^4.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cron": "^4.3.0",

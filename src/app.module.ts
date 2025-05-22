@@ -16,9 +16,6 @@ import { StatisticModule } from '@/statistic/statistic.module'
 import { ThreadModule } from '@/thread/thread.module'
 import { WatcherModule } from '@/watcher/watcher.module'
 
-// eslint-disable-next-line no-restricted-imports
-import '../cabinet.config.json'
-
 @Module({
   imports: [
     GraphQLModule.forRoot<ApolloDriverConfig>({
