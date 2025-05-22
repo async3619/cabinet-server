@@ -43,6 +43,7 @@ model Thread {
   title     String?
   content   String?
   createdAt DateTime
+  bumpedAt  DateTime?
 
   watchers    Watcher[]
   attachments Attachment[]
