@@ -114,8 +114,8 @@ model WatcherThread {
   watcher   Watcher @relation(fields: [watcherId], references: [id])
   watcherId Int
 
-  thread   Thread @relation(fields: [threadId], references: [id])
-  threadId String
+  thread   Thread? @relation(fields: [threadId], references: [id])
+  threadId String?
 }
 
 model Statistic {
