@@ -29,7 +29,9 @@ export type ConfigData = {
     hashCheck?: boolean
     thumbnailPath: string
   }
-  crawlInterval: number | string
+  crawling: {
+    interval: number | string
+  }
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
   }
@@ -61,7 +63,7 @@ export class ConfigService
   }
 
   get crawlInterval(): number | string {
-    return this.config.crawlInterval
+    return this.config.crawling.interval
   }
 
   get config() {
