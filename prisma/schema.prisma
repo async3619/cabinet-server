@@ -46,9 +46,10 @@ model Thread {
   bumpedAt   DateTime?
   isArchived Boolean   @default(false)
 
-  watchers    Watcher[]
-  attachments Attachment[]
-  posts       Post[]
+  watchers       Watcher[]
+  attachments    Attachment[]
+  posts          Post[]
+  watcherThreads WatcherThread[]
 
   board   Board  @relation(fields: [boardId], references: [id])
   boardId String
@@ -101,8 +102,20 @@ model Watcher {
   name String
   type String
 
-  threads     Thread[]
-  attachments Attachment[]
+  threads        Thread[]
+  attachments    Attachment[]
+  watcherThreads WatcherThread[]
+}
+
+model WatcherThread {
+  id  Int    @id @default(autoincrement())
+  url String
+
+  watcher   Watcher @relation(fields: [watcherId], references: [id])
+  watcherId Int
+
+  thread   Thread @relation(fields: [threadId], references: [id])
+  threadId String
 }
 
 model Statistic {
