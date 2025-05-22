@@ -12,6 +12,7 @@ import * as _ from 'lodash'
 import * as pluralize from 'pluralize'
 import prettyMilliseconds from 'pretty-ms'
 
+import { AttachmentService } from '@/attachment/attachment.service'
 import { BoardService } from '@/board/board.service'
 import { ConfigService } from '@/config/config.service'
 import {
@@ -45,6 +46,8 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     @Inject(BoardService) private readonly boardService: BoardService,
     @Inject(ThreadService) private readonly threadService: ThreadService,
     @Inject(PostService) private readonly postService: PostService,
+    @Inject(AttachmentService)
+    private readonly attachmentService: AttachmentService,
     @Inject(SchedulerRegistry)
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
@@ -105,7 +108,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       this.schedulerRegistry.deleteTimeout(CRAWLER_TASK_NAME)
     }
 
-    const crawlInterval = this.configService.crawlInterval
+    const crawlInterval = this.configService.crawling.interval
     if (typeof crawlInterval === 'string') {
       const job = new CronJob(crawlInterval, this.doCrawl.bind(this))
       this.schedulerRegistry.addCronJob(CRAWLER_TASK_NAME, job)
@@ -229,7 +232,118 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(
         `This crawling task took ${chalk.blue(prettyMilliseconds(elapsedTime, { verbose: true }))}`,
       )
+
+      if (this.configService.crawling.deleteObsolete) {
+        await this.cleanUpObsoleteEntities()
+      }
     })()
+  }
+
+  private async cleanUpObsoleteEntities() {
+    this.logger.log('Now try to delete obsolete entities')
+
+    const archivedThreads = await this.threadService.find({
+      where: { isArchived: true },
+      include: {
+        board: true,
+        attachments: {
+          include: {
+            threads: true,
+            posts: true,
+          },
+        },
+        posts: {
+          include: {
+            attachments: {
+              include: {
+                threads: true,
+                posts: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const obsoleteThreads = archivedThreads.filter((thread) => {
+      return this.watchers.some((watcher) => {
+        return !WATCHER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
+          watcher.config,
+          thread,
+        )
+      })
+    })
+
+    const obsoletePosts = _.chain(obsoleteThreads).flatMap('posts').value()
+
+    const obsoleteThreadIdMap = _.chain(obsoleteThreads)
+      .keyBy((item) => item.id)
+      .mapValues(() => true)
+      .value()
+
+    const obsoletePostIdMap = _.chain(obsoletePosts)
+      .keyBy((item) => item.id)
+      .mapValues(() => true)
+      .value()
+
+    const allAttachments = _.chain(obsoleteThreads)
+      .flatMap((thread) => thread.attachments)
+      .concat(
+        _.chain(obsoleteThreads)
+          .flatMap((thread) => thread.posts)
+          .flatMap((post) => post.attachments)
+          .value(),
+      )
+      .uniqBy((attachment) => attachment.id)
+      .value()
+
+    const obsoleteAttachments = allAttachments.filter((attachment) => {
+      const relationCount = _.chain([
+        ...attachment.posts,
+        ...attachment.threads,
+      ])
+        .map('id')
+        .uniq()
+        .filter((id) => !!obsoleteThreadIdMap[id] || !!obsoletePostIdMap[id])
+        .toLength()
+        .value()
+
+      return relationCount === 0
+    })
+
+    if (
+      obsoleteThreads.length === 0 &&
+      obsoletePosts.length === 0 &&
+      obsoleteAttachments.length === 0
+    ) {
+      this.logger.log(`No obsolete entities found.`)
+      return
+    }
+
+    const tokens = [
+      `${obsoleteThreads.length} ${pluralize('thread', obsoleteThreads.length)}`,
+      `${obsoletePosts.length} ${pluralize('post', obsoletePosts.length)}`,
+      `${obsoleteAttachments.length} ${pluralize('attachment', obsoleteAttachments.length)}`,
+    ].map((token) => `  - ${chalk.blue(token)}`)
+
+    this.logger.log(`Successfully found these obsolete entities:`)
+    for (const token of tokens) {
+      this.logger.log(token)
+    }
+
+    await this.postService.deleteMany({
+      where: {
+        id: { in: obsoletePosts.map((post) => post.id) },
+      },
+    })
+
+    await this.threadService.deleteMany({
+      where: {
+        id: { in: obsoleteThreads.map((thread) => thread.id) },
+      },
+    })
+
+    this.attachmentService.cleanUpMany(obsoleteAttachments)
   }
 
   private handleConfigChange = async () => {
