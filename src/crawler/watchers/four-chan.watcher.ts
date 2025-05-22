@@ -146,7 +146,10 @@ export class FourChanWatcher extends BaseWatcher<
       .fromPairs()
       .value()
 
-    const boards = allBoards.filter((board) => validBoardCodes[board.code])
+    const boards = [
+      ...allBoards.filter((board) => validBoardCodes[board.code]),
+      ..._.chain(matchedThreads).values().map('board').value(),
+    ]
     const threadMap: Record<string, RawThread<'four-chan'>> = {}
     for (const board of boards) {
       const threads = await this.provider.getThreadsFromBoard(board)
