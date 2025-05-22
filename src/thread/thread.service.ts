@@ -39,6 +39,7 @@ export class ThreadService extends EntityBaseService<'thread'> {
         content: thread.content,
         createdAt: dayjs.unix(thread.createdAt).toDate(),
         bumpedAt: dayjs.unix(thread.createdAt).toDate(),
+        isArchived: false,
         board: {
           connect: { id: getBoardUniqueId(thread.board) },
         },

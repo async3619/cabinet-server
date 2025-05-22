@@ -38,12 +38,13 @@ model Board {
 model Thread {
   id String @id
 
-  no        Int
-  author    String
-  title     String?
-  content   String?
-  createdAt DateTime
-  bumpedAt  DateTime?
+  no         Int
+  author     String
+  title      String?
+  content    String?
+  createdAt  DateTime
+  bumpedAt   DateTime?
+  isArchived Boolean   @default(false)
 
   watchers    Watcher[]
   attachments Attachment[]
