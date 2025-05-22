@@ -70,9 +70,6 @@ export class WatcherService
   }
 
   private async initializeWatchers() {
-    await this.prisma.watcherThread.deleteMany()
-    await this.prisma.watcher.deleteMany()
-
     const watcherMap = _.chain(this.configService.config.watchers)
       .values()
       .flatten()
@@ -109,6 +106,17 @@ export class WatcherService
     })
 
     for (const watcher of watchers) {
+      const watcherEntity = await this.prisma.watcher.findFirst({
+        where: { name: watcher.name },
+      })
+
+      if (watcherEntity) {
+        this.logger.warn(
+          `Watcher '${watcher.name}' already exists, skipping...`,
+        )
+        continue
+      }
+
       const matchedThreads = threads.filter((thread) =>
         WATCHER_CONSTRUCTOR_MAP[watcher.type].checkIfMatched(watcher, thread),
       )
@@ -124,20 +132,22 @@ export class WatcherService
         .uniqBy('id')
         .value()
 
-      await this.prisma.watcher.create({
-        data: {
-          name: watcher.name,
-          type: watcher.type,
-          attachments: {
-            connect: attachments.map((attachment) => ({
-              id: attachment.id,
-            })),
+      if (!watcherEntity) {
+        await this.prisma.watcher.create({
+          data: {
+            name: watcher.name,
+            type: watcher.type,
+            attachments: {
+              connect: attachments.map((attachment) => ({
+                id: attachment.id,
+              })),
+            },
+            threads: {
+              connect: matchedThreads.map((thread) => ({ id: thread.id })),
+            },
           },
-          threads: {
-            connect: matchedThreads.map((thread) => ({ id: thread.id })),
-          },
-        },
-      })
+        })
+      }
     }
   }
 
@@ -182,8 +192,6 @@ export class WatcherService
         },
       },
     })
-
-    this.crawlerService.doCrawl()
 
     return true
   }
