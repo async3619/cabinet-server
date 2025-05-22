@@ -107,6 +107,7 @@ export class FourChanWatcher extends BaseWatcher<
 
   async watch(watcherThreads: WatcherThread[]): Promise<WatcherResult> {
     const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
+    const watcherThreadMap: Record<number, string> = {}
     const allBoards = await this.provider.getAllBoards()
 
     if (watcherThreads.length > 0) {
@@ -135,7 +136,9 @@ export class FourChanWatcher extends BaseWatcher<
           continue
         }
 
-        matchedThreads[getThreadUniqueId(thread)] = thread
+        const uniqueId = getThreadUniqueId(thread)
+        matchedThreads[uniqueId] = thread
+        watcherThreadMap[watcherThread.id] = uniqueId
       }
     }
 
@@ -253,6 +256,7 @@ export class FourChanWatcher extends BaseWatcher<
       boards,
       posts,
       threads: targetThreads,
+      watcherThreadIdMap: watcherThreadMap,
     }
   }
 

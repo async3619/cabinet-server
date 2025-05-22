@@ -13,6 +13,7 @@ export interface WatcherResult {
   boards: RawBoard<string>[]
   posts: RawPost<string>[]
   threads: RawThread<string>[]
+  watcherThreadIdMap: Record<number, string>
 }
 
 export abstract class BaseWatcher<

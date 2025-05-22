@@ -183,6 +183,8 @@ export class WatcherService
       },
     })
 
+    this.crawlerService.doCrawl()
+
     return true
   }
 
@@ -190,5 +192,42 @@ export class WatcherService
     return this.prisma.watcherThread.findMany({
       where: { watcherId: entity.id },
     })
+  }
+
+  async connectWatcherThreads(watcherThreadIdMap: Record<number, string>) {
+    for (const [watcherThreadId, threadId] of Object.entries(
+      watcherThreadIdMap,
+    )) {
+      const watcherThread = await this.prisma.watcherThread.findUnique({
+        where: { id: Number(watcherThreadId) },
+      })
+
+      if (!watcherThread) {
+        this.logger.warn(
+          `Watcher thread with ID '${watcherThreadId}' not found. Skipping connection.`,
+        )
+        continue
+      }
+
+      const thread = await this.prisma.thread.findUnique({
+        where: { id: threadId },
+      })
+
+      if (!thread) {
+        this.logger.warn(
+          `Thread with ID '${threadId}' not found. Skipping connection.`,
+        )
+        continue
+      }
+
+      await this.prisma.watcherThread.update({
+        where: { id: watcherThread.id },
+        data: {
+          thread: {
+            connect: { id: thread.id },
+          },
+        },
+      })
+    }
   }
 }

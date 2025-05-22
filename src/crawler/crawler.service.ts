@@ -132,7 +132,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async doCrawl(): Promise<void> {
+  async doCrawl(): Promise<void> {
     this.crawlingPromise = (async () => {
       this.logger.log(
         `Starting crawling task for ${this.watchers.length} watchers`,
@@ -148,6 +148,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
           let threads: Record<string, RawThread<string>> = {}
           let posts: Record<string, RawPost<string>> = {}
           let attachments: Record<string, RawAttachment<string>> = {}
+          let watcherThreadIdMap: Record<number, string> = {}
 
           const threadWatcherMap: Record<string, Watcher[]> = {}
           const attachmentWatcherMap: Record<string, Watcher[]> = {}
@@ -158,6 +159,11 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
             )
 
             const result = await watcher.watch(watcherThreads)
+
+            watcherThreadIdMap = {
+              ...watcherThreadIdMap,
+              ...result.watcherThreadIdMap,
+            }
 
             for (const thread of result.threads) {
               const id = getThreadUniqueId(thread)
@@ -216,6 +222,8 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
             Object.values(posts),
             attachmentWatcherMap,
           )
+
+          await this.watcherService.connectWatcherThreads(watcherThreadIdMap)
 
           return { boards, threads, posts, attachments }
         })
