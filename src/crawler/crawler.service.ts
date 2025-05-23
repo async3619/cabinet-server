@@ -160,6 +160,14 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
             const result = await watcher.watch(watcherThreads)
 
+            const archivedWatcherThreads = watcherThreads.filter(
+              (item) => !watcherThreadIdMap[item.id],
+            )
+
+            await this.watcherService.markWatcherThreadsAsArchived(
+              archivedWatcherThreads,
+            )
+
             watcherThreadIdMap = {
               ...watcherThreadIdMap,
               ...result.watcherThreadIdMap,

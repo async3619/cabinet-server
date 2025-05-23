@@ -108,8 +108,9 @@ model Watcher {
 }
 
 model WatcherThread {
-  id  Int    @id @default(autoincrement())
-  url String
+  id         Int     @id @default(autoincrement())
+  url        String
+  isArchived Boolean @default(false)
 
   watcher   Watcher @relation(fields: [watcherId], references: [id])
   watcherId Int

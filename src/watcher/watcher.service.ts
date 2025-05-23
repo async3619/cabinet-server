@@ -12,6 +12,7 @@ import prettyMilliseconds from 'pretty-ms'
 import { EntityBaseService } from '@/common/entity-base.service'
 import { ConfigService } from '@/config/config.service'
 import { CrawlerService } from '@/crawler/crawler.service'
+import { WatcherThread } from '@/crawler/types/watcher-thread'
 import { WATCHER_CONSTRUCTOR_MAP } from '@/crawler/watchers'
 import { Watcher } from '@/generated/graphql'
 import { PrismaService } from '@/prisma/prisma.service'
@@ -198,7 +199,7 @@ export class WatcherService
 
   getWatcherThreads(entity: Watcher) {
     return this.prisma.watcherThread.findMany({
-      where: { watcherId: entity.id },
+      where: { watcherId: entity.id, isArchived: false },
     })
   }
 
@@ -237,5 +238,18 @@ export class WatcherService
         },
       })
     }
+  }
+
+  async markWatcherThreadsAsArchived(archivedWatcherThreads: WatcherThread[]) {
+    await this.prisma.watcherThread.updateMany({
+      where: {
+        id: {
+          in: archivedWatcherThreads.map((thread) => thread.id),
+        },
+      },
+      data: {
+        isArchived: true,
+      },
+    })
   }
 }
