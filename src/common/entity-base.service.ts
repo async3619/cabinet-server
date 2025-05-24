@@ -41,12 +41,16 @@ export abstract class EntityBaseService<
     return this.delegate.count.bind(this.delegate)
   }
 
+  get aggregate(): TEntityDelegate['aggregate'] {
+    return this.delegate.aggregate.bind(this.delegate)
+  }
+
   get find(): TEntityDelegate['findMany'] {
     return this.delegate.findMany.bind(this.delegate)
   }
 
-  get findOne(): TEntityDelegate['findFirst'] {
-    return this.delegate.findFirst.bind(this.delegate)
+  get findOne(): TEntityDelegate['findUnique'] {
+    return this.delegate.findUnique.bind(this.delegate)
   }
 
   get update(): TEntityDelegate['update'] {
@@ -67,5 +71,13 @@ export abstract class EntityBaseService<
 
   get upsert(): TEntityDelegate['upsert'] {
     return this.delegate.upsert.bind(this.delegate)
+  }
+
+  get deleteMany(): TEntityDelegate['deleteMany'] {
+    return this.delegate.deleteMany.bind(this.delegate)
+  }
+
+  get delete(): TEntityDelegate['delete'] {
+    return this.delegate.delete.bind(this.delegate)
   }
 }

@@ -84,6 +84,7 @@ export class AttachmentController {
         const head = {
           'Content-Range': `bytes ${start}-${end}/${size}`,
           'Content-Length': chunkSize,
+          'Content-Type': attachment.mime,
         }
 
         res.writeHead(HttpStatus.PARTIAL_CONTENT, head) //206

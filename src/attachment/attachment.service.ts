@@ -5,6 +5,7 @@ import { Queue } from 'bullmq'
 import * as dayjs from 'dayjs'
 import { decode as decodeHtmlEntities } from 'html-entities'
 
+import { AttachmentJobData } from '@/attachment/attachment.processor'
 import { EntityBaseService } from '@/common/entity-base.service'
 import {
   getAttachmentUniqueId,
@@ -15,11 +16,16 @@ import { PostService } from '@/post/post.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { Watcher } from '@/watcher/types/watcher'
 
+interface MinimalAttachment {
+  id: string
+}
+
 @Injectable()
 export class AttachmentService extends EntityBaseService<'attachment'> {
   constructor(
     @Inject(PrismaService) prismaService: PrismaService,
-    @InjectQueue('attachment') private readonly attachmentQueue: Queue,
+    @InjectQueue('attachment')
+    private readonly attachmentQueue: Queue<AttachmentJobData>,
     @Inject(forwardRef(() => PostService))
     private readonly postService: PostService,
   ) {
@@ -53,6 +59,7 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
     })
 
     await this.attachmentQueue.add('download', {
+      type: 'download',
       attachment,
     })
   }
@@ -84,5 +91,17 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
         },
       },
     })
+  }
+
+  cleanUpMany(attachments: MinimalAttachment[]) {
+    this.attachmentQueue.addBulk(
+      attachments.map((item) => ({
+        name: 'deletion',
+        data: {
+          type: 'deletion',
+          attachmentId: item.id,
+        },
+      })),
+    )
   }
 }

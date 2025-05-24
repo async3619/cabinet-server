@@ -12,11 +12,9 @@ import { ConfigModule } from '@/config/config.module'
 import { CrawlerModule } from '@/crawler/crawler.module'
 import { PostModule } from '@/post/post.module'
 import { PrismaModule } from '@/prisma/prisma.module'
+import { StatisticModule } from '@/statistic/statistic.module'
 import { ThreadModule } from '@/thread/thread.module'
 import { WatcherModule } from '@/watcher/watcher.module'
-
-// eslint-disable-next-line no-restricted-imports
-import '../cabinet.config.json'
 
 @Module({
   imports: [
@@ -31,8 +29,8 @@ import '../cabinet.config.json'
     }),
     BullModule.forRoot({
       connection: {
-        host: process.env.REDIS_HOST,
-        port: Number(process.env.REDIS_PORT),
+        host: process.env.REDIS_HOST ?? 'localhost',
+        port: Number(process.env.REDIS_PORT ?? 6379),
       },
     }),
     ScheduleModule.forRoot(),
@@ -44,6 +42,7 @@ import '../cabinet.config.json'
     PostModule,
     AttachmentModule,
     WatcherModule,
+    StatisticModule,
   ],
 })
 export class AppModule {}

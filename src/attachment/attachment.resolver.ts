@@ -1,12 +1,13 @@
 import { Inject } from '@nestjs/common'
 import { Args, Int, Query, ResolveField, Resolver, Root } from '@nestjs/graphql'
+import { GraphQLBigInt } from 'graphql-scalars'
 
 import { AttachmentService } from '@/attachment/attachment.service'
 import {
   Attachment,
   AttachmentCount,
-  FindFirstAttachmentArgs,
   FindManyAttachmentArgs,
+  FindUniqueAttachmentArgs,
   Post,
   Thread,
   Watcher,
@@ -24,9 +25,20 @@ export class AttachmentResolver {
     return this.attachmentService.count()
   }
 
+  @Query(() => GraphQLBigInt)
+  async totalSize(): Promise<number> {
+    const { _sum } = await this.attachmentService.aggregate({
+      _sum: {
+        size: true,
+      },
+    })
+
+    return _sum.size ?? 0
+  }
+
   @Query(() => Attachment)
   async attachment(
-    @Args() args: FindFirstAttachmentArgs,
+    @Args() args: FindUniqueAttachmentArgs,
   ): Promise<Attachment | null> {
     return this.attachmentService.findOne(args)
   }

@@ -38,15 +38,18 @@ model Board {
 model Thread {
   id String @id
 
-  no        Int
-  author    String
-  title     String?
-  content   String?
-  createdAt DateTime
+  no         Int
+  author     String
+  title      String?
+  content    String?
+  createdAt  DateTime
+  bumpedAt   DateTime?
+  isArchived Boolean   @default(false)
 
-  watchers    Watcher[]
-  attachments Attachment[]
-  posts       Post[]
+  watchers       Watcher[]
+  attachments    Attachment[]
+  posts          Post[]
+  watcherThreads WatcherThread[]
 
   board   Board  @relation(fields: [boardId], references: [id])
   boardId String
@@ -99,6 +102,30 @@ model Watcher {
   name String
   type String
 
-  threads     Thread[]
-  attachments Attachment[]
+  threads        Thread[]
+  attachments    Attachment[]
+  watcherThreads WatcherThread[]
+}
+
+model WatcherThread {
+  id         Int     @id @default(autoincrement())
+  url        String
+  isArchived Boolean @default(false)
+
+  watcher   Watcher @relation(fields: [watcherId], references: [id])
+  watcherId Int
+
+  thread   Thread? @relation(fields: [threadId], references: [id])
+  threadId String?
+}
+
+model Statistic {
+  id Int @id @default(autoincrement())
+
+  threadCount     Int
+  postCount       Int
+  attachmentCount Int
+  totalSize       BigInt
+
+  createdAt DateTime @default(now())
 }
