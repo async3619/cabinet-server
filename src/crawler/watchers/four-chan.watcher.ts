@@ -40,7 +40,7 @@ export class FourChanWatcher extends BaseWatcher<
   private readonly provider: FourChanProvider
   private readonly archivedThreadCache = new Map<
     number,
-    RawThread<'four-chan'>
+    RawThread<'four-chan'> | null
   >()
 
   static checkIfMatched(options: FourChanWatcherOptions, thread: Thread) {
@@ -187,22 +187,21 @@ export class FourChanWatcher extends BaseWatcher<
       const threadIds = await this.provider.getArchivedThreadIds(board)
       for (const threadId of threadIds) {
         try {
-          let thread = this.archivedThreadCache.get(threadId)
-          if (!thread) {
-            thread = await this.provider.getThreadFromId(threadId, board)
-            if (thread) {
-              this.archivedThreadCache.set(threadId, thread)
+          if (this.archivedThreadCache.has(threadId)) {
+            const cachedThread = this.archivedThreadCache.get(threadId)
+            if (cachedThread) {
+              archivedThreadMap[getThreadUniqueId(cachedThread)] = cachedThread
             }
+
+            continue
           }
 
-          if (!thread) {
-            throw new Error(
-              `Could not find thread for search archive: ${threadId}`,
-            )
-          }
+          const thread = await this.provider.getThreadFromId(threadId, board)
+          this.archivedThreadCache.set(threadId, thread)
 
           archivedThreadMap[getThreadUniqueId(thread)] = thread
         } catch (e) {
+          this.archivedThreadCache.set(threadId, null)
           this.logger.error(
             `Failed to get archived thread ${threadId} from board ${boardCode}: ${e}`,
           )
