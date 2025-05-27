@@ -14,6 +14,9 @@ import { md5 } from '@/utils/hash'
 import { mimeType } from '@/utils/mimetype'
 import { normalizePath } from '@/utils/normalizePath'
 
+/**
+ * @public
+ */
 export interface FileSystemStorageOptions
   extends BaseStorageOptions<'filesystem'> {
   filePath: string

@@ -2,7 +2,7 @@ import { FileSystemStorage } from '@/attachment/storages/file-system.storage'
 
 type StorageTypes = FileSystemStorage
 
-export type StorageMap = {
+type StorageMap = {
   [TName in StorageTypes['name']]: Extract<StorageTypes, { name: TName }>
 }
 
