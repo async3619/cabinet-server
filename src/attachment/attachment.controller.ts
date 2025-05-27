@@ -9,9 +9,8 @@ import {
 } from '@nestjs/common'
 import { Response } from 'express'
 
-import * as fs from 'node:fs'
-
 import { AttachmentService } from '@/attachment/attachment.service'
+import { NotFoundError } from '@/utils/errors/not-found'
 
 @Controller('attachments')
 export class AttachmentController {
@@ -30,13 +29,19 @@ export class AttachmentController {
       return res.status(404).send('File not found')
     }
 
-    const filePath = attachment.thumbnailFileUri
-    if (!filePath || !fs.existsSync(filePath)) {
+    const storage = this.attachmentService.storage
+    const fileUri = attachment.thumbnailFileUri
+    if (!fileUri) {
       return res.status(404).send('File not found')
     }
 
-    const file = fs.createReadStream(filePath)
-    file.pipe(res)
+    const exists = await storage.exists(fileUri)
+    if (!exists) {
+      return res.status(404).send('File not found')
+    }
+
+    const stream = await storage.getStreamOf(fileUri)
+    stream.pipe(res)
   }
 
   @Get('/:uuid/:filename')
@@ -54,8 +59,14 @@ export class AttachmentController {
       return res.status(404).send('File not found')
     }
 
-    const filePath = attachment.fileUri
-    if (!filePath || !fs.existsSync(filePath)) {
+    const storage = this.attachmentService.storage
+    const fileUri = attachment.fileUri
+    if (!fileUri) {
+      return res.status(404).send('File not found')
+    }
+
+    const exists = await storage.exists(fileUri)
+    if (!exists) {
       return res.status(404).send('File not found')
     }
 
@@ -64,38 +75,44 @@ export class AttachmentController {
       return res.status(404).send('File not found')
     }
 
-    if (!attachment.mime?.startsWith('video/')) {
-      const file = fs.createReadStream(filePath)
-      file.pipe(res)
-    } else {
-      const { size } = fs.statSync(filePath)
-      const videoRange = headers.range
-      if (videoRange) {
-        const parts = videoRange.replace(/bytes=/, '').split('-')
-        const start = parseInt(parts[0], 10)
-        const end = parts[1] ? parseInt(parts[1], 10) : size - 1
-        const chunkSize = end - start + 1
-        const readStreamfile = fs.createReadStream(filePath, {
-          start,
-          end,
-          highWaterMark: 60,
-        })
-
-        const head = {
-          'Content-Range': `bytes ${start}-${end}/${size}`,
-          'Content-Length': chunkSize,
-          'Content-Type': attachment.mime,
-        }
-
-        res.writeHead(HttpStatus.PARTIAL_CONTENT, head) //206
-        readStreamfile.pipe(res)
+    try {
+      if (!attachment.mime?.startsWith('video/')) {
+        const stream = await storage.getStreamOf(fileUri)
+        stream.pipe(res)
       } else {
-        const head = {
-          'Content-Length': size,
+        const size = await storage.getSizeOf(fileUri)
+        const videoRange = headers.range
+        if (videoRange) {
+          const parts = videoRange.replace(/bytes=/, '').split('-')
+          const start = parseInt(parts[0], 10)
+          const end = parts[1] ? parseInt(parts[1], 10) : size - 1
+          const chunkSize = end - start + 1
+          const stream = await storage.getStreamOf(fileUri)
+
+          const head = {
+            'Content-Range': `bytes ${start}-${end}/${size}`,
+            'Content-Length': chunkSize,
+            'Content-Type': attachment.mime,
+          }
+
+          res.writeHead(HttpStatus.PARTIAL_CONTENT, head) //206
+          stream.pipe(res)
+        } else {
+          const head = {
+            'Content-Length': size,
+          }
+          res.writeHead(HttpStatus.OK, head)
+
+          const stream = await storage.getStreamOf(fileUri)
+          stream.pipe(res)
         }
-        res.writeHead(HttpStatus.OK, head)
-        fs.createReadStream(filePath).pipe(res)
       }
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).send('File not found')
+      }
+
+      throw error
     }
   }
 }

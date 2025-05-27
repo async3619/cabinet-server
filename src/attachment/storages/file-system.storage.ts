@@ -1,9 +1,11 @@
 import * as fs from 'fs-extra'
 
 import * as path from 'node:path'
+import type { Readable } from 'stream'
 
 import type {
   BaseStorageOptions,
+  GetStreamOfOptions,
   StorageDeleteOptions,
   StorageSaveResult,
 } from '@/attachment/storages/base.storage'
@@ -27,6 +29,8 @@ export class FileSystemStorage extends BaseStorage<
   'filesystem',
   FileSystemStorageOptions
 > {
+  private readonly fileHashMap = new Map<string, string>()
+
   constructor(options: FileSystemStorageOptions) {
     super('filesystem', options)
   }
@@ -77,5 +81,32 @@ export class FileSystemStorage extends BaseStorage<
     if (thumbnailUri && fs.existsSync(thumbnailUri)) {
       await fs.remove(thumbnailUri)
     }
+  }
+
+  exists(uri: string): Promise<boolean> {
+    return fs.pathExists(uri)
+  }
+
+  async getHashOf(uri: string): Promise<string | null> {
+    let hash: string | undefined = this.fileHashMap.get(uri)
+    if (!hash) {
+      hash = await md5(uri)
+      this.fileHashMap.set(uri, hash)
+    }
+
+    return hash
+  }
+
+  async getStreamOf(
+    uri: string,
+    options: GetStreamOfOptions,
+  ): Promise<Readable> {
+    return fs.createReadStream(uri, options)
+  }
+
+  async getSizeOf(uri: string): Promise<number> {
+    const { size } = await fs.stat(uri)
+
+    return size
   }
 }
