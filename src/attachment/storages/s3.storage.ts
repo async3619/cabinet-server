@@ -29,6 +29,7 @@ import { mimeType } from '@/utils/mimetype'
  * @public
  */
 export interface S3StorageOptions extends BaseStorageOptions<'s3'> {
+  bypassExistsCheck?: boolean
   credentials?: {
     accessKeyId: string
     secretAccessKey: string
@@ -235,6 +236,9 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
 
   async exists(uri: string): Promise<boolean> {
     const { bucketName, key } = this.parseUri(uri)
+    if (this.options.bypassExistsCheck) {
+      return true
+    }
 
     try {
       await this.client.send(
