@@ -86,11 +86,11 @@ model Attachment {
   hash      String?
   createdAt DateTime
   timestamp BigInt?
-  filePath  String?
+  fileUri   String?
 
-  thumbnailWidth    Int?
-  thumbnailHeight   Int?
-  thumbnailFilePath String?
+  thumbnailWidth   Int?
+  thumbnailHeight  Int?
+  thumbnailFileUri String?
 
   threads  Thread[]
   posts    Post[]
