@@ -30,4 +30,8 @@ export abstract class BaseStorage<
   abstract save(attachment: RawAttachment<string>): Promise<StorageSaveResult>
 
   abstract delete(options: StorageDeleteOptions): Promise<void>
+
+  abstract getHashOf(uri: string): Promise<string | null>
+
+  abstract exists(uri: string): Promise<boolean>
 }

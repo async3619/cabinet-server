@@ -2,7 +2,6 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq'
 import { Inject, Logger } from '@nestjs/common'
 import { Job } from 'bullmq'
 import { filesize } from 'filesize'
-import * as fs from 'fs-extra'
 
 import { AttachmentService } from '@/attachment/attachment.service'
 import { ConfigService } from '@/config/config.service'
@@ -11,7 +10,6 @@ import {
   RawAttachment,
 } from '@/crawler/types/attachment'
 import { DownloadError } from '@/utils/downloadFile'
-import { md5 } from '@/utils/hash'
 import { sleep } from '@/utils/sleep'
 
 interface DownloadJobData {
@@ -29,7 +27,6 @@ export type AttachmentJobData = DownloadJobData | DeletionJobData
 @Processor('attachment')
 export class AttachmentProcessor extends WorkerHost {
   private readonly logger = new Logger(AttachmentProcessor.name)
-  private readonly fileHashMap = new Map<string, string>()
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
@@ -39,16 +36,6 @@ export class AttachmentProcessor extends WorkerHost {
     super()
   }
 
-  private async getHashFromFile(filePath: string) {
-    let hash: string | undefined = this.fileHashMap.get(filePath)
-    if (!hash) {
-      hash = await md5(filePath)
-      this.fileHashMap.set(filePath, hash)
-    }
-
-    return hash
-  }
-
   private async checkShouldDownload(attachment: RawAttachment<string>) {
     const { hashCheck } = this.configService.attachment
     const uniqueId = getAttachmentUniqueId(attachment)
@@ -56,17 +43,26 @@ export class AttachmentProcessor extends WorkerHost {
       where: { id: uniqueId },
     })
 
+    const storage = this.attachmentService.storage
+
     if (attachment.thumbnail?.url) {
-      if (
-        !entity?.thumbnailFileUri ||
-        !fs.existsSync(entity.thumbnailFileUri)
-      ) {
+      if (!entity?.thumbnailFileUri) {
+        return true
+      }
+
+      const thumbnailExists = await storage.exists(entity?.thumbnailFileUri)
+      if (!thumbnailExists) {
         return true
       }
     }
 
-    if (!entity?.fileUri || !fs.existsSync(entity.fileUri)) {
+    if (!entity?.fileUri) {
       return true
+    } else {
+      const fileExists = await storage.exists(entity.fileUri)
+      if (!fileExists) {
+        return true
+      }
     }
 
     if (hashCheck) {
@@ -74,7 +70,10 @@ export class AttachmentProcessor extends WorkerHost {
         return false
       }
 
-      const fileHash = await this.getHashFromFile(entity.fileUri)
+      const fileHash = await this.attachmentService.storage.getHashOf(
+        entity.fileUri,
+      )
+
       if (entity.hash !== fileHash) {
         return true
       }

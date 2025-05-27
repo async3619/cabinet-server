@@ -27,6 +27,8 @@ export class FileSystemStorage extends BaseStorage<
   'filesystem',
   FileSystemStorageOptions
 > {
+  private readonly fileHashMap = new Map<string, string>()
+
   constructor(options: FileSystemStorageOptions) {
     super('filesystem', options)
   }
@@ -77,5 +79,19 @@ export class FileSystemStorage extends BaseStorage<
     if (thumbnailUri && fs.existsSync(thumbnailUri)) {
       await fs.remove(thumbnailUri)
     }
+  }
+
+  exists(uri: string): Promise<boolean> {
+    return fs.pathExists(uri)
+  }
+
+  async getHashOf(uri: string): Promise<string | null> {
+    let hash: string | undefined = this.fileHashMap.get(uri)
+    if (!hash) {
+      hash = await md5(uri)
+      this.fileHashMap.set(uri, hash)
+    }
+
+    return hash
   }
 }

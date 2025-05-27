@@ -3,6 +3,8 @@ import {
   BucketAlreadyOwnedByYou,
   CreateBucketCommand,
   DeleteObjectCommand,
+  GetObjectCommand,
+  NoSuchKey,
   PutBucketPolicyCommand,
   PutPublicAccessBlockCommand,
   S3Client,
@@ -49,6 +51,20 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
       credentials: options.credentials,
       endpoint: options.endpoint,
     })
+  }
+
+  private parseUri(uri: string): { bucketName: string; key: string } {
+    const url = new URL(uri)
+    if (url.protocol !== 's3:') {
+      throw new Error(`Invalid S3 URI "${uri}". It must start with "s3://".`)
+    }
+
+    const bucketName = url.hostname
+    const key = url.pathname.startsWith('/')
+      ? url.pathname.slice(1)
+      : url.pathname
+
+    return { bucketName, key }
   }
 
   private async ensureBucket(bucketUri: string) {
@@ -113,8 +129,7 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
   }
 
   private async uploadFromUrl(fileUrl: string, destinationUri: string) {
-    const { hostname: bucketName, pathname: filePath } = new URL(destinationUri)
-
+    const { key, bucketName } = this.parseUri(destinationUri)
     const response = await fetch(fileUrl)
     if (!response.ok) {
       throw new DownloadError(await response.text(), response.status)
@@ -129,7 +144,7 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
       client: this.client,
       params: {
         Bucket: bucketName,
-        Key: filePath.startsWith('/') ? filePath.slice(1) : filePath,
+        Key: key,
         Body: buffer,
       },
     })
@@ -143,8 +158,7 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
   }
 
   private async deleteObject(targetUri: string) {
-    const { hostname: bucketName, pathname: filePath } = new URL(targetUri)
-    const key = filePath.startsWith('/') ? filePath.slice(1) : filePath
+    const { key, bucketName } = this.parseUri(targetUri)
 
     try {
       await this.client.send(
@@ -217,5 +231,36 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
     if (thumbnailUri) {
       await this.deleteObject(thumbnailUri)
     }
+  }
+
+  async exists(uri: string): Promise<boolean> {
+    const { bucketName, key } = this.parseUri(uri)
+
+    try {
+      await this.client.send(
+        new GetObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        }),
+      )
+
+      return true
+    } catch (error) {
+      if (error instanceof NoSuchKey) {
+        return false
+      }
+
+      if (error instanceof S3ServiceException) {
+        throw new Error(
+          `Error from S3 while getting object from ${bucketName}.  ${error.name}: ${error.message}`,
+        )
+      }
+
+      throw error
+    }
+  }
+
+  async getHashOf(): Promise<string | null> {
+    throw new Error('Method not implemented.')
   }
 }
