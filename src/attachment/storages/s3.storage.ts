@@ -25,6 +25,7 @@ import type {
 import { BaseStorage } from '@/attachment/storages/base.storage'
 import type { RawAttachment } from '@/crawler/types/attachment'
 import { DownloadError } from '@/utils/downloadFile'
+import { NotFoundError } from '@/utils/errors/not-found'
 import { md5 } from '@/utils/hash'
 import { mimeType } from '@/utils/mimetype'
 
@@ -274,20 +275,34 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
 
   async getStreamOf(uri: string): Promise<Readable> {
     const { bucketName, key } = this.parseUri(uri)
-    console.log(bucketName, key)
+    try {
+      const item = await this.client.send(
+        new GetObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        }),
+      )
 
-    const item = await this.client.send(
-      new GetObjectCommand({
-        Bucket: bucketName,
-        Key: key,
-      }),
-    )
+      if (!item.Body) {
+        throw new Error(`No body found for S3 object at ${uri}`)
+      }
 
-    if (!item.Body) {
-      throw new Error(`No body found for S3 object at ${uri}`)
+      return item.Body as Readable
+    } catch (error) {
+      if (error instanceof NoSuchKey) {
+        throw new NotFoundError(
+          `No such key "${key}" in bucket "${bucketName}"`,
+        )
+      }
+
+      if (error instanceof S3ServiceException) {
+        throw new Error(
+          `Error from S3 while getting object from ${bucketName}. ${error.name}: ${error.message}`,
+        )
+      }
+
+      throw error
     }
-
-    return item.Body as Readable
   }
 
   async getSizeOf(uri: string): Promise<number> {
