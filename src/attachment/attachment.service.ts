@@ -12,7 +12,7 @@ import * as dayjs from 'dayjs'
 import { decode as decodeHtmlEntities } from 'html-entities'
 
 import { AttachmentJobData } from '@/attachment/attachment.processor'
-import { STORAGE_CONSTRUCTOR_MAP } from '@/attachment/storages'
+import { createStorageInstance } from '@/attachment/storages'
 import {
   BaseStorage,
   BaseStorageOptions,
@@ -64,10 +64,7 @@ export class AttachmentService
   }
 
   async onModuleInit() {
-    this.storageInstance = new STORAGE_CONSTRUCTOR_MAP[
-      this.configService.storage.type
-    ](this.configService.storage)
-
+    this.storageInstance = createStorageInstance(this.configService.storage)
     await this.storageInstance.initialize()
 
     this.logger.log(

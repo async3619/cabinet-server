@@ -1,29 +1,35 @@
 import * as crypto from 'crypto'
 import * as fs from 'node:fs'
+import { Readable } from 'stream'
 
-export async function md5(filePath: fs.PathLike) {
-  if (!fs.existsSync(filePath))
-    throw new Error(
-      `The specified file "${filePath}" does not exist. Please check the path and try again.`,
-    )
+export async function md5(target: string | Buffer): Promise<string> {
+  if (typeof target === 'string') {
+    if (!fs.existsSync(target))
+      throw new Error(
+        `The specified file "${target}" does not exist. Please check the path and try again.`,
+      )
 
-  if (fs.statSync(filePath).isDirectory())
-    throw new Error(
-      `The path "${filePath}" points to a directory, not a file. Please provide a valid file path.`,
-    )
+    if (fs.statSync(target).isDirectory())
+      throw new Error(
+        `The path "${target}" points to a directory, not a file. Please provide a valid file path.`,
+      )
 
-  try {
-    fs.accessSync(filePath, fs.constants.R_OK)
-  } catch {
-    throw new Error(
-      `The file "${filePath}" is not readable. Please check your permissions.`,
-    )
+    try {
+      fs.accessSync(target, fs.constants.R_OK)
+    } catch {
+      throw new Error(
+        `The file "${target}" is not readable. Please check your permissions.`,
+      )
+    }
   }
 
   const md5Hash = await (() => {
     return new Promise<string>((resolve, reject) => {
       const hash = crypto.createHash('md5')
-      const fileStream = fs.createReadStream(filePath)
+      const fileStream =
+        typeof target === 'string'
+          ? fs.createReadStream(target)
+          : Readable.from(target)
 
       fileStream.on('error', (err) => {
         reject(err)
