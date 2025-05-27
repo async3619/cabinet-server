@@ -4,6 +4,7 @@ import {
   CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   NoSuchKey,
   PutBucketPolicyCommand,
   PutPublicAccessBlockCommand,
@@ -13,6 +14,8 @@ import {
   waitUntilObjectNotExists,
 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
+
+import type { Readable } from 'stream'
 
 import type {
   BaseStorageOptions,
@@ -51,6 +54,7 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
       region: options.region,
       credentials: options.credentials,
       endpoint: options.endpoint,
+      followRegionRedirects: true,
     })
   }
 
@@ -242,7 +246,7 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
 
     try {
       await this.client.send(
-        new GetObjectCommand({
+        new HeadObjectCommand({
           Bucket: bucketName,
           Key: key,
         }),
@@ -266,5 +270,54 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
 
   async getHashOf(): Promise<string | null> {
     throw new Error('Method not implemented.')
+  }
+
+  async getStreamOf(uri: string): Promise<Readable> {
+    const { bucketName, key } = this.parseUri(uri)
+    console.log(bucketName, key)
+
+    const item = await this.client.send(
+      new GetObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+      }),
+    )
+
+    if (!item.Body) {
+      throw new Error(`No body found for S3 object at ${uri}`)
+    }
+
+    return item.Body as Readable
+  }
+
+  async getSizeOf(uri: string): Promise<number> {
+    const { bucketName, key } = this.parseUri(uri)
+
+    try {
+      const response = await this.client.send(
+        new HeadObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+        }),
+      )
+
+      if (!response.ContentLength) {
+        throw new Error(`No ContentLength found for S3 object at ${uri}`)
+      }
+
+      return response.ContentLength
+    } catch (error) {
+      if (error instanceof NoSuchKey) {
+        throw new Error(`No such key "${key}" in bucket "${bucketName}"`)
+      }
+
+      if (error instanceof S3ServiceException) {
+        throw new Error(
+          `Error from S3 while getting size of object from ${bucketName}. ${error.name}: ${error.message}`,
+        )
+      }
+
+      throw error
+    }
   }
 }

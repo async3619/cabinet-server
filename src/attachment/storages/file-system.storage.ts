@@ -1,9 +1,11 @@
 import * as fs from 'fs-extra'
 
 import * as path from 'node:path'
+import type { Readable } from 'stream'
 
 import type {
   BaseStorageOptions,
+  GetStreamOfOptions,
   StorageDeleteOptions,
   StorageSaveResult,
 } from '@/attachment/storages/base.storage'
@@ -93,5 +95,18 @@ export class FileSystemStorage extends BaseStorage<
     }
 
     return hash
+  }
+
+  async getStreamOf(
+    uri: string,
+    options: GetStreamOfOptions,
+  ): Promise<Readable> {
+    return fs.createReadStream(uri, options)
+  }
+
+  async getSizeOf(uri: string): Promise<number> {
+    const { size } = await fs.stat(uri)
+
+    return size
   }
 }
