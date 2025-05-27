@@ -1,12 +1,24 @@
 import { InjectQueue } from '@nestjs/bullmq'
-import { forwardRef, Inject, Injectable } from '@nestjs/common'
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common'
 import { Prisma } from '@prisma/client'
 import { Queue } from 'bullmq'
 import * as dayjs from 'dayjs'
 import { decode as decodeHtmlEntities } from 'html-entities'
 
 import { AttachmentJobData } from '@/attachment/attachment.processor'
+import { STORAGE_CONSTRUCTOR_MAP } from '@/attachment/storages'
+import {
+  BaseStorage,
+  BaseStorageOptions,
+} from '@/attachment/storages/base.storage'
 import { EntityBaseService } from '@/common/entity-base.service'
+import { ConfigService } from '@/config/config.service'
 import {
   getAttachmentUniqueId,
   RawAttachment,
@@ -21,8 +33,19 @@ interface MinimalAttachment {
 }
 
 @Injectable()
-export class AttachmentService extends EntityBaseService<'attachment'> {
+export class AttachmentService
+  extends EntityBaseService<'attachment'>
+  implements OnModuleInit
+{
+  private readonly logger = new Logger(AttachmentService.name)
+
+  private storageInstance: BaseStorage<
+    string,
+    BaseStorageOptions<string>
+  > | null = null
+
   constructor(
+    @Inject(ConfigService) private readonly configService: ConfigService,
     @Inject(PrismaService) prismaService: PrismaService,
     @InjectQueue('attachment')
     private readonly attachmentQueue: Queue<AttachmentJobData>,
@@ -30,6 +53,26 @@ export class AttachmentService extends EntityBaseService<'attachment'> {
     private readonly postService: PostService,
   ) {
     super(prismaService, 'attachment')
+  }
+
+  get storage() {
+    if (!this.storageInstance) {
+      throw new Error('Attachment storage is not initialized')
+    }
+
+    return this.storageInstance
+  }
+
+  async onModuleInit() {
+    this.storageInstance = new STORAGE_CONSTRUCTOR_MAP[
+      this.configService.storage.type
+    ](this.configService.storage)
+
+    await this.storageInstance.initialize()
+
+    this.logger.log(
+      `Successfully initialized '${this.storageInstance.name}' storage`,
+    )
   }
 
   async save(attachment: RawAttachment<string>, watchers: Watcher[]) {

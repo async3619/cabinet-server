@@ -4,17 +4,14 @@ import { Job } from 'bullmq'
 import { filesize } from 'filesize'
 import * as fs from 'fs-extra'
 
-import * as path from 'node:path'
-
 import { AttachmentService } from '@/attachment/attachment.service'
 import { ConfigService } from '@/config/config.service'
 import {
   getAttachmentUniqueId,
   RawAttachment,
 } from '@/crawler/types/attachment'
-import { DownloadError, downloadFile } from '@/utils/downloadFile'
+import { DownloadError } from '@/utils/downloadFile'
 import { md5 } from '@/utils/hash'
-import { mimeType } from '@/utils/mimetype'
 import { sleep } from '@/utils/sleep'
 
 interface DownloadJobData {
@@ -61,14 +58,14 @@ export class AttachmentProcessor extends WorkerHost {
 
     if (attachment.thumbnail?.url) {
       if (
-        !entity?.thumbnailFilePath ||
-        !fs.existsSync(entity.thumbnailFilePath)
+        !entity?.thumbnailFileUri ||
+        !fs.existsSync(entity.thumbnailFileUri)
       ) {
         return true
       }
     }
 
-    if (!entity?.filePath || !fs.existsSync(entity.filePath)) {
+    if (!entity?.fileUri || !fs.existsSync(entity.fileUri)) {
       return true
     }
 
@@ -77,7 +74,7 @@ export class AttachmentProcessor extends WorkerHost {
         return false
       }
 
-      const fileHash = await this.getHashFromFile(entity.filePath)
+      const fileHash = await this.getHashFromFile(entity.fileUri)
       if (entity.hash !== fileHash) {
         return true
       }
@@ -95,8 +92,7 @@ export class AttachmentProcessor extends WorkerHost {
 
     const { attachment } = job.data
     const uniqueId = getAttachmentUniqueId(attachment)
-    const { downloadThrottle, thumbnailPath, downloadPath } =
-      this.configService.attachment
+    const { downloadThrottle } = this.configService.attachment
 
     const fileInformation = [
       `'${attachment.createdAt}${attachment.extension}'`,
@@ -105,42 +101,22 @@ export class AttachmentProcessor extends WorkerHost {
       .filter(Boolean)
       .join(' ')
 
-    const filePath = path.join(
-      path.isAbsolute(downloadPath)
-        ? downloadPath
-        : path.join(process.cwd(), downloadPath),
-      `${attachment.createdAt}${attachment.extension}`,
-    )
-
-    const thumbnailFilePath = path.join(
-      path.isAbsolute(thumbnailPath)
-        ? thumbnailPath
-        : path.join(process.cwd(), thumbnailPath),
-      `${attachment.createdAt}s.jpg`,
-    )
-
     const shouldDownload = await this.checkShouldDownload(attachment)
     if (!shouldDownload) {
       return
     }
 
-    await fs.ensureDir(downloadPath)
-    await fs.ensureDir(thumbnailPath)
-
     while (true) {
       try {
-        await downloadFile(attachment.url, filePath)
-        if (attachment.thumbnail) {
-          await downloadFile(attachment.thumbnail.url, thumbnailFilePath)
-        }
-
-        const mime = await mimeType(filePath)
-        const fileHash = await md5(filePath)
-        this.fileHashMap.set(filePath, fileHash)
+        const {
+          fileUri,
+          thumbnailUri: thumbnailFileUri,
+          mime,
+        } = await this.attachmentService.storage.save(attachment)
 
         await this.attachmentService.update({
           where: { id: uniqueId },
-          data: { filePath, thumbnailFilePath, mime },
+          data: { fileUri, thumbnailFileUri, mime },
         })
 
         this.logger.log(`Successfully downloaded file ${fileInformation}`)
@@ -180,13 +156,10 @@ export class AttachmentProcessor extends WorkerHost {
       return
     }
 
-    if (entity.filePath && fs.existsSync(entity.filePath)) {
-      await fs.remove(entity.filePath)
-    }
-
-    if (entity.thumbnailFilePath && fs.existsSync(entity.thumbnailFilePath)) {
-      await fs.remove(entity.thumbnailFilePath)
-    }
+    await this.attachmentService.storage.delete({
+      fileUri: entity.fileUri,
+      thumbnailUri: entity.thumbnailFileUri,
+    })
 
     await this.attachmentService.delete({ where: { id } })
 
