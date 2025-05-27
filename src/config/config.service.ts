@@ -13,6 +13,7 @@ import * as JsonSchemaGenerator from 'ts-json-schema-generator'
 import * as path from 'node:path'
 import * as process from 'node:process'
 
+import { StorageOptionsMap } from '@/attachment/storages'
 import { WatcherMap } from '@/crawler/watchers'
 import { EventEmitter, EventMap } from '@/utils/event-emitter'
 
@@ -33,6 +34,7 @@ export type ConfigData = {
     deleteObsolete?: boolean
     interval: number | string
   }
+  storage: StorageOptionsMap[keyof StorageOptionsMap]
   watchers: {
     [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
   }
