@@ -8,8 +8,8 @@ export interface StorageSaveResult {
 }
 
 export interface StorageDeleteOptions {
-  fileUri: string
-  thumbnailUri?: string
+  fileUri?: string | null
+  thumbnailUri?: string | null
 }
 
 export interface BaseStorageOptions<TName extends string> {

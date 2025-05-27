@@ -1,6 +1,6 @@
 import * as fs from 'fs-extra'
 
-import path from 'node:path'
+import * as path from 'node:path'
 
 import type {
   BaseStorageOptions,
@@ -14,7 +14,8 @@ import { md5 } from '@/utils/hash'
 import { mimeType } from '@/utils/mimetype'
 import { normalizePath } from '@/utils/normalizePath'
 
-interface FileSystemStorageOptions extends BaseStorageOptions<'filesystem'> {
+export interface FileSystemStorageOptions
+  extends BaseStorageOptions<'filesystem'> {
   filePath: string
   thumbnailPath: string
 }

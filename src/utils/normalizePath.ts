@@ -1,4 +1,4 @@
-import path from 'node:path'
+import * as path from 'node:path'
 
 export function normalizePath(targetPath: string): string {
   return path.isAbsolute(targetPath)

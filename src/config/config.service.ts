@@ -22,13 +22,11 @@ import { EventEmitter, EventMap } from '@/utils/event-emitter'
  */
 export type ConfigData = {
   attachment: {
-    downloadPath: string
     downloadThrottle: {
       download: number
       failover: number
     }
     hashCheck?: boolean
-    thumbnailPath: string
   }
   crawling: {
     deleteObsolete?: boolean
@@ -60,6 +58,10 @@ export class ConfigService
 
   private currentConfig: ConfigData | null = null
   private watcher: chokidar.FSWatcher | null = null
+
+  get storage() {
+    return this.config.storage
+  }
 
   get attachment() {
     return this.config.attachment

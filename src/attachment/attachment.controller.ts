@@ -30,7 +30,7 @@ export class AttachmentController {
       return res.status(404).send('File not found')
     }
 
-    const filePath = attachment.thumbnailFilePath
+    const filePath = attachment.thumbnailFileUri
     if (!filePath || !fs.existsSync(filePath)) {
       return res.status(404).send('File not found')
     }
@@ -54,7 +54,7 @@ export class AttachmentController {
       return res.status(404).send('File not found')
     }
 
-    const filePath = attachment.filePath
+    const filePath = attachment.fileUri
     if (!filePath || !fs.existsSync(filePath)) {
       return res.status(404).send('File not found')
     }
