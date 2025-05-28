@@ -19,6 +19,7 @@ import type { Readable } from 'stream'
 
 import type {
   BaseStorageOptions,
+  GetStreamOfOptions,
   StorageDeleteOptions,
   StorageSaveResult,
 } from '@/attachment/storages/base.storage'
@@ -273,13 +274,22 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
     throw new Error('Method not implemented.')
   }
 
-  async getStreamOf(uri: string): Promise<Readable> {
+  async getStreamOf(
+    uri: string,
+    options: GetStreamOfOptions,
+  ): Promise<Readable> {
     const { bucketName, key } = this.parseUri(uri)
     try {
+      let range: string | undefined
+      if (options.start && options.end) {
+        range = `bytes=${options.start}-${options.end}`
+      }
+
       const item = await this.client.send(
         new GetObjectCommand({
           Bucket: bucketName,
           Key: key,
+          Range: range,
         }),
       )
 
