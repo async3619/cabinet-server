@@ -276,12 +276,12 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
 
   async getStreamOf(
     uri: string,
-    options: GetStreamOfOptions,
+    options?: GetStreamOfOptions,
   ): Promise<Readable> {
     const { bucketName, key } = this.parseUri(uri)
     try {
       let range: string | undefined
-      if (options.start && options.end) {
+      if (options && options.start && options.end) {
         range = `bytes=${options.start}-${options.end}`
       }
 
