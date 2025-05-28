@@ -20,7 +20,7 @@ export interface BaseStorageOptions<TName extends string> {
 
 export interface GetStreamOfOptions {
   end?: number
-  highwaterMark?: number
+  highWaterMark?: number
   start?: number
 }
 

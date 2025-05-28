@@ -87,7 +87,11 @@ export class AttachmentController {
           const start = parseInt(parts[0], 10)
           const end = parts[1] ? parseInt(parts[1], 10) : size - 1
           const chunkSize = end - start + 1
-          const stream = await storage.getStreamOf(fileUri)
+          const stream = await storage.getStreamOf(fileUri, {
+            start,
+            end,
+            highWaterMark: 60,
+          })
 
           const head = {
             'Content-Range': `bytes ${start}-${end}/${size}`,
