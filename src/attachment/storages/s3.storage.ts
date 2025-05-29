@@ -15,7 +15,7 @@ import {
 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
 
-import type { Readable } from 'stream'
+import { Readable } from 'stream'
 
 import type {
   BaseStorageOptions,
@@ -297,7 +297,10 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
         throw new Error(`No body found for S3 object at ${uri}`)
       }
 
-      return item.Body as Readable
+      const byteArray = await item.Body.transformToByteArray()
+      const buffer = Buffer.from(byteArray)
+
+      return Readable.from(buffer)
     } catch (error) {
       if (error instanceof NoSuchKey) {
         throw new NotFoundError(
