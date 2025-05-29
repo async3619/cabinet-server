@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common'
 import { Response } from 'express'
 
+import { Readable } from 'stream'
+
 import { AttachmentService } from '@/attachment/attachment.service'
 import { NotFoundError } from '@/utils/errors/not-found'
 
@@ -51,6 +53,11 @@ export class AttachmentController {
     @Res() res: Response,
     @Headers() headers: Record<string, string>,
   ) {
+    let isClosed = false
+    res.on('close', () => {
+      isClosed = true
+    })
+
     const attachment = await this.attachmentService.findOne({
       where: { uuid },
     })
@@ -75,9 +82,14 @@ export class AttachmentController {
       return res.status(404).send('File not found')
     }
 
+    if (isClosed) {
+      return
+    }
+
     try {
+      let stream: Readable | null
       if (!attachment.mime?.startsWith('video/')) {
-        const stream = await storage.getStreamOf(fileUri)
+        stream = await storage.getStreamOf(fileUri)
         stream.pipe(res)
       } else {
         const size = await storage.getSizeOf(fileUri)
@@ -87,29 +99,31 @@ export class AttachmentController {
           const start = parseInt(parts[0], 10)
           const end = parts[1] ? parseInt(parts[1], 10) : size - 1
           const chunkSize = end - start + 1
-          const stream = await storage.getStreamOf(fileUri, {
+
+          stream = await storage.getStreamOf(fileUri, {
             start,
             end,
             highWaterMark: 60,
           })
 
-          const head = {
+          res.writeHead(HttpStatus.PARTIAL_CONTENT, {
             'Content-Range': `bytes ${start}-${end}/${size}`,
             'Content-Length': chunkSize,
             'Content-Type': attachment.mime,
-          }
-
-          res.writeHead(HttpStatus.PARTIAL_CONTENT, head) //206
+          })
           stream.pipe(res)
         } else {
-          const head = {
-            'Content-Length': size,
-          }
-          res.writeHead(HttpStatus.OK, head)
+          stream = await storage.getStreamOf(fileUri)
 
-          const stream = await storage.getStreamOf(fileUri)
+          res.writeHead(HttpStatus.OK, {
+            'Content-Length': size,
+          })
           stream.pipe(res)
         }
+      }
+
+      if (isClosed) {
+        stream.destroy()
       }
     } catch (error) {
       if (error instanceof NotFoundError) {
