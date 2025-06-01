@@ -14,10 +14,15 @@ import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
+interface QueryItem {
+  caseInsensitive?: boolean
+  exclude?: boolean
+  query: string
+}
+
 interface FourChanWatcherEntry {
   boards: string[]
-  caseInsensitive?: boolean
-  queries: string[]
+  queries: QueryItem[]
   searchArchive?: boolean
   target: 'title' | 'content' | 'both'
 }
@@ -43,29 +48,65 @@ export class FourChanWatcher extends BaseWatcher<
     RawThread<'four-chan'> | null
   >()
 
-  static checkIfMatched(options: FourChanWatcherOptions, thread: Thread) {
+  static checkIfMatched(
+    {
+      entries,
+    }: FourChanWatcherOptions | Pick<FourChanWatcherOptions, 'entries'>,
+    thread: Thread | RawThread<'four-chan'>,
+  ) {
     if (!thread.board) {
       throw new Error("Given thread doesn't have board data")
     }
 
-    for (const { boards, target, queries } of options.entries) {
-      if (!boards.includes(thread.board.code)) {
+    for (const entry of entries) {
+      if (!entry.boards.includes(thread.board.code)) {
         continue
       }
 
-      const titleMatched = queries.some((query) =>
-        thread.title?.includes(query),
+      const { target } = entry
+      const title = thread.title
+      const content = thread.content
+
+      const allQueries = entry.queries.map((item) => ({
+        ...item,
+        query: item.caseInsensitive ? item.query.toLowerCase() : item.query,
+      }))
+
+      const includeQueries = allQueries.filter((item) => !item.exclude)
+      const excludeQueries = allQueries.filter((item) => item.exclude)
+
+      const titleMatched = includeQueries.some((item) =>
+        item.caseInsensitive
+          ? title?.toLowerCase().includes(item.query)
+          : title?.includes(item.query),
       )
-      const contentMatched = queries.some((query) =>
-        thread.content?.includes(query),
+
+      const contentMatched = includeQueries.some((item) =>
+        item.caseInsensitive
+          ? content?.toLowerCase().includes(item.query)
+          : content?.includes(item.query),
+      )
+
+      const titleExcluded = excludeQueries.some((item) =>
+        item.caseInsensitive
+          ? title?.toLowerCase().includes(item.query)
+          : title?.includes(item.query),
+      )
+
+      const contentExcluded = excludeQueries.some((item) =>
+        item.caseInsensitive
+          ? content?.toLowerCase().includes(item.query)
+          : content?.includes(item.query),
       )
 
       if (target === 'title') {
-        return titleMatched
+        return titleMatched && !titleExcluded && (!content || !contentExcluded)
       } else if (target === 'content') {
-        return contentMatched
+        return contentMatched && !contentExcluded && (!title || !titleExcluded)
       } else if (target === 'both') {
-        return titleMatched || contentMatched
+        return (
+          (titleMatched || contentMatched) && !titleExcluded && !contentExcluded
+        )
       }
     }
 
@@ -234,26 +275,7 @@ export class FourChanWatcher extends BaseWatcher<
 
     for (const [entry, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
-        const { target, caseInsensitive } = entry
-        let title = thread.title
-        let content = thread.content
-        let queries = entry.queries
-        if (caseInsensitive) {
-          title = title?.toLowerCase()
-          content = content?.toLowerCase()
-          queries = queries.map((query) => query.toLowerCase())
-        }
-
-        const titleMatched = queries.some((query) => title?.includes(query))
-        const contentMatched = queries.some((query) => content?.includes(query))
-
-        if (target === 'title') {
-          return titleMatched
-        } else if (target === 'content') {
-          return contentMatched
-        } else if (target === 'both') {
-          return titleMatched || contentMatched
-        }
+        return FourChanWatcher.checkIfMatched({ entries: [entry] }, thread)
       })
 
       for (const thread of filteredThreads) {
