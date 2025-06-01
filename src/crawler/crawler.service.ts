@@ -292,7 +292,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
     const obsoleteThreads = archivedThreads.filter((thread) => {
       return (
-        thread.watcherThreads.length < 0 &&
+        thread.watcherThreads.length <= 0 &&
         this.watchers.some((watcher) => {
           return !WATCHER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
             watcher.config,
