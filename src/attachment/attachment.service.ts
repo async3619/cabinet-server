@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   Logger,
+  OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common'
 import { Prisma } from '@prisma/client'
@@ -35,7 +36,7 @@ interface MinimalAttachment {
 @Injectable()
 export class AttachmentService
   extends EntityBaseService<'attachment'>
-  implements OnModuleInit
+  implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(AttachmentService.name)
 
@@ -70,6 +71,12 @@ export class AttachmentService
     this.logger.log(
       `Successfully initialized '${this.storageInstance.name}' storage`,
     )
+
+    this.configService.on('change', this.handleConfigChange)
+  }
+
+  async onModuleDestroy() {
+    this.configService.off('change', this.handleConfigChange)
   }
 
   async save(attachment: RawAttachment<string>, watchers: Watcher[]) {
@@ -142,6 +149,21 @@ export class AttachmentService
           attachmentId: item.id,
         },
       })),
+    )
+  }
+
+  private handleConfigChange = async () => {
+    this.logger.warn(
+      `Configuration changed, reinitializing stroage provider...`,
+    )
+
+    const storage = createStorageInstance(this.configService.storage)
+    await storage.initialize()
+
+    this.storageInstance = storage
+
+    this.logger.log(
+      `Successfully re-initialized '${this.storageInstance.name}' storage`,
     )
   }
 }
