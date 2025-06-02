@@ -1,16 +1,16 @@
+import type { FourChanCrawlerOptions } from '@/crawler/crawlers/four-chan.crawler'
 import { BaseProvider } from '@/crawler/providers/base.provider'
 import type { FourChanAPIEndpoints } from '@/crawler/providers/four-chan.provider.types'
 import type { RawAttachment } from '@/crawler/types/attachment'
 import type { RawBoard } from '@/crawler/types/board'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
-import type { FourChanWatcherOptions } from '@/crawler/watchers/four-chan.watcher'
 import { HTTPClient } from '@/utils/fetcher'
 
 export class FourChanProvider extends BaseProvider<'four-chan'> {
   private readonly fetcher: HTTPClient<FourChanAPIEndpoints>
 
-  constructor(options: Readonly<FourChanWatcherOptions>) {
+  constructor(options: Readonly<FourChanCrawlerOptions>) {
     super('four-chan', options)
     this.fetcher = new HTTPClient<FourChanAPIEndpoints>(options.endpoint)
   }

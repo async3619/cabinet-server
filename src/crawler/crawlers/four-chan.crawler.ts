@@ -1,16 +1,16 @@
 import { Logger } from '@nestjs/common'
 import * as _ from 'lodash'
 
+import type {
+  BaseCrawlerOptions,
+  CrawlerResult,
+} from '@/crawler/crawlers/base.crawler'
+import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
 import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
 import { getThreadUniqueId } from '@/crawler/types/thread'
 import type { WatcherThread } from '@/crawler/types/watcher-thread'
-import type {
-  BaseWatcherOptions,
-  WatcherResult,
-} from '@/crawler/watchers/base.watcher'
-import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
@@ -20,38 +20,39 @@ interface QueryItem {
   query: string
 }
 
-interface FourChanWatcherEntry {
+interface FourChanCrawlerEntry {
   boards: string[]
   queries: QueryItem[]
   searchArchive?: boolean
   target: 'title' | 'content' | 'both'
 }
 
-export interface FourChanWatcherOptions
-  extends BaseWatcherOptions<'four-chan'> {
+export interface FourChanCrawlerOptions
+  extends BaseCrawlerOptions<'four-chan'> {
   endpoint: string
-  entries: FourChanWatcherEntry[]
+  entries: FourChanCrawlerEntry[]
 }
 
 const ENDPOINT_PATHNAME_REGEX_MAP = {
   'a.4cdn.org': /^\/([a-z0-9]*?)\/thread\/(\d+)$/,
 }
 
-export class FourChanWatcher extends BaseWatcher<
+export class FourChanCrawler extends BaseCrawler<
   'four-chan',
-  FourChanWatcherOptions
+  FourChanCrawlerOptions
 > {
-  private readonly logger = new Logger(FourChanWatcher.name)
-  private readonly provider: FourChanProvider
-  private readonly archivedThreadCache = new Map<
+  private static readonly archivedThreadCache = new Map<
     number,
     RawThread<'four-chan'> | null
   >()
 
+  private readonly logger = new Logger(FourChanCrawler.name)
+  private readonly provider: FourChanProvider
+
   static checkIfMatched(
     {
       entries,
-    }: FourChanWatcherOptions | Pick<FourChanWatcherOptions, 'entries'>,
+    }: FourChanCrawlerOptions | Pick<FourChanCrawlerOptions, 'entries'>,
     thread: Thread | RawThread<'four-chan'>,
   ) {
     if (!thread.board) {
@@ -113,7 +114,7 @@ export class FourChanWatcher extends BaseWatcher<
     return false
   }
 
-  constructor(options: FourChanWatcherOptions, watcher: Watcher) {
+  constructor(options: FourChanCrawlerOptions, watcher: Watcher) {
     super('four-chan', options, watcher)
     this.provider = new FourChanProvider(options)
   }
@@ -150,7 +151,7 @@ export class FourChanWatcher extends BaseWatcher<
     return null
   }
 
-  async watch(watcherThreads: WatcherThread[]): Promise<WatcherResult> {
+  async watch(watcherThreads: WatcherThread[]): Promise<CrawlerResult> {
     const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
     const watcherThreadMap: Record<number, string> = {}
     const allBoards = await this.provider.getAllBoards()
@@ -226,10 +227,11 @@ export class FourChanWatcher extends BaseWatcher<
       }
 
       const threadIds = await this.provider.getArchivedThreadIds(board)
+      const threadCacheMap = FourChanCrawler.archivedThreadCache
       for (const threadId of threadIds) {
         try {
-          if (this.archivedThreadCache.has(threadId)) {
-            const cachedThread = this.archivedThreadCache.get(threadId)
+          if (threadCacheMap.has(threadId)) {
+            const cachedThread = threadCacheMap.get(threadId)
             if (cachedThread) {
               archivedThreadMap[getThreadUniqueId(cachedThread)] = cachedThread
             }
@@ -238,11 +240,11 @@ export class FourChanWatcher extends BaseWatcher<
           }
 
           const thread = await this.provider.getThreadFromId(threadId, board)
-          this.archivedThreadCache.set(threadId, thread)
+          threadCacheMap.set(threadId, thread)
 
           archivedThreadMap[getThreadUniqueId(thread)] = thread
         } catch (e) {
-          this.archivedThreadCache.set(threadId, null)
+          threadCacheMap.set(threadId, null)
           this.logger.error(
             `Failed to get archived thread ${threadId} from board ${boardCode}: ${e}`,
           )
@@ -275,7 +277,7 @@ export class FourChanWatcher extends BaseWatcher<
 
     for (const [entry, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
-        return FourChanWatcher.checkIfMatched({ entries: [entry] }, thread)
+        return FourChanCrawler.checkIfMatched({ entries: [entry] }, thread)
       })
 
       for (const thread of filteredThreads) {

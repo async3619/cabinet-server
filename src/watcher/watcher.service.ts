@@ -12,8 +12,8 @@ import prettyMilliseconds from 'pretty-ms'
 import { EntityBaseService } from '@/common/entity-base.service'
 import { ConfigService } from '@/config/config.service'
 import { CrawlerService } from '@/crawler/crawler.service'
+import { CRAWLER_CONSTRUCTOR_MAP } from '@/crawler/crawlers'
 import { WatcherThread } from '@/crawler/types/watcher-thread'
-import { WATCHER_CONSTRUCTOR_MAP } from '@/crawler/watchers'
 import { Watcher } from '@/generated/graphql'
 import { PrismaService } from '@/prisma/prisma.service'
 import { ThreadService } from '@/thread/thread.service'
@@ -119,7 +119,7 @@ export class WatcherService
       }
 
       const matchedThreads = threads.filter((thread) =>
-        WATCHER_CONSTRUCTOR_MAP[watcher.type].checkIfMatched(watcher, thread),
+        CRAWLER_CONSTRUCTOR_MAP[watcher.type].checkIfMatched(watcher, thread),
       )
 
       const attachments = _.chain(matchedThreads)
