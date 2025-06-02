@@ -1,78 +1,120 @@
 import { Logger } from '@nestjs/common'
 import * as _ from 'lodash'
 
+import type {
+  BaseCrawlerOptions,
+  CrawlerResult,
+} from '@/crawler/crawlers/base.crawler'
+import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
 import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
 import { getThreadUniqueId } from '@/crawler/types/thread'
 import type { WatcherThread } from '@/crawler/types/watcher-thread'
-import type {
-  BaseWatcherOptions,
-  WatcherResult,
-} from '@/crawler/watchers/base.watcher'
-import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
-interface FourChanWatcherEntry {
-  boards: string[]
+interface QueryItem {
   caseInsensitive?: boolean
-  queries: string[]
+  exclude?: boolean
+  query: string
+}
+
+interface FourChanCrawlerEntry {
+  boards: string[]
+  queries: QueryItem[]
   searchArchive?: boolean
   target: 'title' | 'content' | 'both'
 }
 
-export interface FourChanWatcherOptions
-  extends BaseWatcherOptions<'four-chan'> {
+export interface FourChanCrawlerOptions
+  extends BaseCrawlerOptions<'four-chan'> {
   endpoint: string
-  entries: FourChanWatcherEntry[]
+  entries: FourChanCrawlerEntry[]
 }
 
 const ENDPOINT_PATHNAME_REGEX_MAP = {
   'a.4cdn.org': /^\/([a-z0-9]*?)\/thread\/(\d+)$/,
 }
 
-export class FourChanWatcher extends BaseWatcher<
+export class FourChanCrawler extends BaseCrawler<
   'four-chan',
-  FourChanWatcherOptions
+  FourChanCrawlerOptions
 > {
-  private readonly logger = new Logger(FourChanWatcher.name)
-  private readonly provider: FourChanProvider
-  private readonly archivedThreadCache = new Map<
+  private static readonly archivedThreadCache = new Map<
     number,
-    RawThread<'four-chan'>
+    RawThread<'four-chan'> | null
   >()
 
-  static checkIfMatched(options: FourChanWatcherOptions, thread: Thread) {
+  private readonly logger = new Logger(FourChanCrawler.name)
+  private readonly provider: FourChanProvider
+
+  static checkIfMatched(
+    {
+      entries,
+    }: FourChanCrawlerOptions | Pick<FourChanCrawlerOptions, 'entries'>,
+    thread: Thread | RawThread<'four-chan'>,
+  ) {
     if (!thread.board) {
       throw new Error("Given thread doesn't have board data")
     }
 
-    for (const { boards, target, queries } of options.entries) {
-      if (!boards.includes(thread.board.code)) {
+    for (const entry of entries) {
+      if (!entry.boards.includes(thread.board.code)) {
         continue
       }
 
-      const titleMatched = queries.some((query) =>
-        thread.title?.includes(query),
+      const { target } = entry
+      const title = thread.title
+      const content = thread.content
+
+      const allQueries = entry.queries.map((item) => ({
+        ...item,
+        query: item.caseInsensitive ? item.query.toLowerCase() : item.query,
+      }))
+
+      const includeQueries = allQueries.filter((item) => !item.exclude)
+      const excludeQueries = allQueries.filter((item) => item.exclude)
+
+      const titleMatched = includeQueries.some((item) =>
+        item.caseInsensitive
+          ? title?.toLowerCase().includes(item.query)
+          : title?.includes(item.query),
       )
-      const contentMatched = queries.some((query) =>
-        thread.content?.includes(query),
+
+      const contentMatched = includeQueries.some((item) =>
+        item.caseInsensitive
+          ? content?.toLowerCase().includes(item.query)
+          : content?.includes(item.query),
+      )
+
+      const titleExcluded = excludeQueries.some((item) =>
+        item.caseInsensitive
+          ? title?.toLowerCase().includes(item.query)
+          : title?.includes(item.query),
+      )
+
+      const contentExcluded = excludeQueries.some((item) =>
+        item.caseInsensitive
+          ? content?.toLowerCase().includes(item.query)
+          : content?.includes(item.query),
       )
 
       if (target === 'title') {
-        return titleMatched
+        return titleMatched && !titleExcluded && (!content || !contentExcluded)
       } else if (target === 'content') {
-        return contentMatched
+        return contentMatched && !contentExcluded && (!title || !titleExcluded)
       } else if (target === 'both') {
-        return titleMatched || contentMatched
+        return (
+          (titleMatched || contentMatched) && !titleExcluded && !contentExcluded
+        )
       }
     }
 
     return false
   }
 
-  constructor(options: FourChanWatcherOptions, watcher: Watcher) {
+  constructor(options: FourChanCrawlerOptions, watcher: Watcher) {
     super('four-chan', options, watcher)
     this.provider = new FourChanProvider(options)
   }
@@ -109,7 +151,7 @@ export class FourChanWatcher extends BaseWatcher<
     return null
   }
 
-  async watch(watcherThreads: WatcherThread[]): Promise<WatcherResult> {
+  async watch(watcherThreads: WatcherThread[]): Promise<CrawlerResult> {
     const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
     const watcherThreadMap: Record<number, string> = {}
     const allBoards = await this.provider.getAllBoards()
@@ -185,24 +227,24 @@ export class FourChanWatcher extends BaseWatcher<
       }
 
       const threadIds = await this.provider.getArchivedThreadIds(board)
+      const threadCacheMap = FourChanCrawler.archivedThreadCache
       for (const threadId of threadIds) {
         try {
-          let thread = this.archivedThreadCache.get(threadId)
-          if (!thread) {
-            thread = await this.provider.getThreadFromId(threadId, board)
-            if (thread) {
-              this.archivedThreadCache.set(threadId, thread)
+          if (threadCacheMap.has(threadId)) {
+            const cachedThread = threadCacheMap.get(threadId)
+            if (cachedThread) {
+              archivedThreadMap[getThreadUniqueId(cachedThread)] = cachedThread
             }
+
+            continue
           }
 
-          if (!thread) {
-            throw new Error(
-              `Could not find thread for search archive: ${threadId}`,
-            )
-          }
+          const thread = await this.provider.getThreadFromId(threadId, board)
+          threadCacheMap.set(threadId, thread)
 
           archivedThreadMap[getThreadUniqueId(thread)] = thread
         } catch (e) {
+          threadCacheMap.set(threadId, null)
           this.logger.error(
             `Failed to get archived thread ${threadId} from board ${boardCode}: ${e}`,
           )
@@ -235,26 +277,7 @@ export class FourChanWatcher extends BaseWatcher<
 
     for (const [entry, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
-        const { target, caseInsensitive } = entry
-        let title = thread.title
-        let content = thread.content
-        let queries = entry.queries
-        if (caseInsensitive) {
-          title = title?.toLowerCase()
-          content = content?.toLowerCase()
-          queries = queries.map((query) => query.toLowerCase())
-        }
-
-        const titleMatched = queries.some((query) => title?.includes(query))
-        const contentMatched = queries.some((query) => content?.includes(query))
-
-        if (target === 'title') {
-          return titleMatched
-        } else if (target === 'content') {
-          return contentMatched
-        } else if (target === 'both') {
-          return titleMatched || contentMatched
-        }
+        return FourChanCrawler.checkIfMatched({ entries: [entry] }, thread)
       })
 
       for (const thread of filteredThreads) {

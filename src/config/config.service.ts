@@ -13,7 +13,8 @@ import * as JsonSchemaGenerator from 'ts-json-schema-generator'
 import * as path from 'node:path'
 import * as process from 'node:process'
 
-import { WatcherMap } from '@/crawler/watchers'
+import { StorageOptionsMap } from '@/attachment/storages'
+import { CrawlerMap } from '@/crawler/crawlers'
 import { EventEmitter, EventMap } from '@/utils/event-emitter'
 
 /**
@@ -21,20 +22,19 @@ import { EventEmitter, EventMap } from '@/utils/event-emitter'
  */
 export type ConfigData = {
   attachment: {
-    downloadPath: string
     downloadThrottle: {
       download: number
       failover: number
     }
     hashCheck?: boolean
-    thumbnailPath: string
   }
   crawling: {
     deleteObsolete?: boolean
     interval: number | string
   }
+  storage: StorageOptionsMap[keyof StorageOptionsMap]
   watchers: {
-    [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
+    [TKey in keyof CrawlerMap]?: CrawlerMap[TKey]['config'][]
   }
 }
 
@@ -58,6 +58,10 @@ export class ConfigService
 
   private currentConfig: ConfigData | null = null
   private watcher: chokidar.FSWatcher | null = null
+
+  get storage() {
+    return this.config.storage
+  }
 
   get attachment() {
     return this.config.attachment
@@ -136,7 +140,7 @@ export class ConfigService
   }
 
   private async handleConfigChange() {
-    this.logger.warn('Server configuration file was changed.')
+    this.logger.warn('Server configuration changed, reloading configuration...')
 
     try {
       await this.loadConfig()

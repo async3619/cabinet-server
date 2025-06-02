@@ -15,6 +15,8 @@ import prettyMilliseconds from 'pretty-ms'
 import { AttachmentService } from '@/attachment/attachment.service'
 import { BoardService } from '@/board/board.service'
 import { ConfigService } from '@/config/config.service'
+import { CRAWLER_CONSTRUCTOR_MAP, CrawlerMap } from '@/crawler/crawlers'
+import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
 import {
   getAttachmentUniqueId,
   RawAttachment,
@@ -22,8 +24,6 @@ import {
 import { getBoardUniqueId, RawBoard } from '@/crawler/types/board'
 import { getPostUniqueId, RawPost } from '@/crawler/types/post'
 import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
-import { WATCHER_CONSTRUCTOR_MAP, WatcherMap } from '@/crawler/watchers'
-import { BaseWatcher } from '@/crawler/watchers/base.watcher'
 import { PostService } from '@/post/post.service'
 import { ThreadService } from '@/thread/thread.service'
 import { stopwatch } from '@/utils/stopwatch'
@@ -35,7 +35,7 @@ const CRAWLER_TASK_NAME = 'crawler'
 @Injectable()
 export class CrawlerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(CrawlerService.name)
-  private readonly watchers: BaseWatcher<string, any>[] = []
+  private readonly crawlers: BaseCrawler<string, any>[] = []
 
   private initializingPromise: Promise<void> | null = null
   private crawlingPromise: Promise<void> | null = null
@@ -54,7 +54,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     this.initializingPromise = (async () => {
-      await this.createWatchers()
+      await this.createCrawlers()
       await this.initializeSchedulers()
     })()
 
@@ -66,29 +66,29 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
   }
 
   getCrawlerByWatcher(watcher: Watcher) {
-    return this.watchers.find((item) => item.entity.id === watcher.id) ?? null
+    return this.crawlers.find((item) => item.entity.id === watcher.id) ?? null
   }
 
-  private async createWatchers(): Promise<void> {
-    this.watchers.length = 0
+  private async createCrawlers(): Promise<void> {
+    this.crawlers.length = 0
 
     const watcherTypes = Object.keys(
       this.configService.config.watchers,
-    ) as Array<keyof WatcherMap>
+    ) as Array<keyof CrawlerMap>
 
     for (const type of watcherTypes) {
-      const watcherConfigs = this.configService.config.watchers[type]
-      if (!watcherConfigs) {
+      const crawlerConfigs = this.configService.config.watchers[type]
+      if (!crawlerConfigs) {
         continue
       }
 
-      for (const config of watcherConfigs) {
+      for (const config of crawlerConfigs) {
         const watcher = await this.watcherService.findByName(config.name)
 
         switch (config.type) {
           case 'four-chan':
-            this.watchers.push(
-              new WATCHER_CONSTRUCTOR_MAP[config.type](config, watcher),
+            this.crawlers.push(
+              new CRAWLER_CONSTRUCTOR_MAP[config.type](config, watcher),
             )
             break
 
@@ -99,7 +99,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
         }
 
         this.logger.log(
-          `Successfully created '${config.name}' (${config.type}) watcher`,
+          `Successfully created '${config.name}' (${config.type}) crawler`,
         )
       }
     }
@@ -135,7 +135,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
   async doCrawl(): Promise<void> {
     this.crawlingPromise = (async () => {
       this.logger.log(
-        `Starting crawling task for ${this.watchers.length} watchers`,
+        `Starting crawling task for ${this.crawlers.length} watchers`,
       )
 
       await this.threadService.updateMany({
@@ -153,7 +153,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
           const threadWatcherMap: Record<string, Watcher[]> = {}
           const attachmentWatcherMap: Record<string, Watcher[]> = {}
 
-          for (const watcher of this.watchers) {
+          for (const watcher of this.crawlers) {
             const watcherThreads = await this.watcherService.getWatcherThreads(
               watcher.entity,
             )
@@ -292,9 +292,9 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
     const obsoleteThreads = archivedThreads.filter((thread) => {
       return (
-        thread.watcherThreads.length < 0 &&
-        this.watchers.some((watcher) => {
-          return !WATCHER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
+        thread.watcherThreads.length <= 0 &&
+        !this.crawlers.some((watcher) => {
+          return CRAWLER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
             watcher.config,
             thread,
           )
@@ -385,15 +385,15 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       this.crawlingPromise = null
     }
 
-    this.logger.log(
-      `Configuration changed, reinitializing watchers and schedulers...`,
+    this.logger.warn(
+      `Server configuration changed, reinitializing crawlers and schedulers...`,
     )
 
     this.initializingPromise = (async () => {
-      await this.createWatchers()
+      await this.createCrawlers()
       await this.initializeSchedulers()
     })()
 
-    this.logger.log(`Watchers and schedulers reinitialized successfully`)
+    this.logger.log(`Crawlers and schedulers reinitialized successfully`)
   }
 }

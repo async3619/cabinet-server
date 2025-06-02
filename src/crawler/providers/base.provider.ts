@@ -1,12 +1,12 @@
+import type { CrawlerOptionsMap } from '@/crawler/crawlers'
 import type { RawBoard } from '@/crawler/types/board'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
-import type { WatcherOptionsMap } from '@/crawler/watchers'
 
-export abstract class BaseProvider<TName extends keyof WatcherOptionsMap> {
+export abstract class BaseProvider<TName extends keyof CrawlerOptionsMap> {
   protected constructor(
     readonly name: TName,
-    protected readonly options: WatcherOptionsMap[TName],
+    protected readonly options: CrawlerOptionsMap[TName],
   ) {}
 
   abstract getAllBoards(): Promise<RawBoard<TName>[]>
