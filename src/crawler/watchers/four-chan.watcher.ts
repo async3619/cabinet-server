@@ -41,12 +41,13 @@ export class FourChanWatcher extends BaseWatcher<
   'four-chan',
   FourChanWatcherOptions
 > {
-  private readonly logger = new Logger(FourChanWatcher.name)
-  private readonly provider: FourChanProvider
-  private readonly archivedThreadCache = new Map<
+  private static readonly archivedThreadCache = new Map<
     number,
     RawThread<'four-chan'> | null
   >()
+
+  private readonly logger = new Logger(FourChanWatcher.name)
+  private readonly provider: FourChanProvider
 
   static checkIfMatched(
     {
@@ -226,10 +227,11 @@ export class FourChanWatcher extends BaseWatcher<
       }
 
       const threadIds = await this.provider.getArchivedThreadIds(board)
+      const threadCacheMap = FourChanWatcher.archivedThreadCache
       for (const threadId of threadIds) {
         try {
-          if (this.archivedThreadCache.has(threadId)) {
-            const cachedThread = this.archivedThreadCache.get(threadId)
+          if (threadCacheMap.has(threadId)) {
+            const cachedThread = threadCacheMap.get(threadId)
             if (cachedThread) {
               archivedThreadMap[getThreadUniqueId(cachedThread)] = cachedThread
             }
@@ -238,11 +240,11 @@ export class FourChanWatcher extends BaseWatcher<
           }
 
           const thread = await this.provider.getThreadFromId(threadId, board)
-          this.archivedThreadCache.set(threadId, thread)
+          threadCacheMap.set(threadId, thread)
 
           archivedThreadMap[getThreadUniqueId(thread)] = thread
         } catch (e) {
-          this.archivedThreadCache.set(threadId, null)
+          threadCacheMap.set(threadId, null)
           this.logger.error(
             `Failed to get archived thread ${threadId} from board ${boardCode}: ${e}`,
           )
