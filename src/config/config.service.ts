@@ -14,7 +14,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { StorageOptionsMap } from '@/attachment/storages'
-import { WatcherMap } from '@/crawler/watchers'
+import { CrawlerMap } from '@/crawler/crawlers'
 import { EventEmitter, EventMap } from '@/utils/event-emitter'
 
 /**
@@ -34,7 +34,7 @@ export type ConfigData = {
   }
   storage: StorageOptionsMap[keyof StorageOptionsMap]
   watchers: {
-    [TKey in keyof WatcherMap]?: WatcherMap[TKey]['config'][]
+    [TKey in keyof CrawlerMap]?: CrawlerMap[TKey]['config'][]
   }
 }
 
