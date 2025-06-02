@@ -385,8 +385,8 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       this.crawlingPromise = null
     }
 
-    this.logger.log(
-      `Configuration changed, reinitializing crawlers and schedulers...`,
+    this.logger.warn(
+      `Server configuration changed, reinitializing crawlers and schedulers...`,
     )
 
     this.initializingPromise = (async () => {

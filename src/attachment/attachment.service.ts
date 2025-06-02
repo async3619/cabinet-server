@@ -154,7 +154,7 @@ export class AttachmentService
 
   private handleConfigChange = async () => {
     this.logger.warn(
-      `Configuration changed, reinitializing stroage provider...`,
+      `Server configuration changed, reinitializing stroage provider...`,
     )
 
     const storage = createStorageInstance(this.configService.storage)

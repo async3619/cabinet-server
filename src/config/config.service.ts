@@ -140,7 +140,7 @@ export class ConfigService
   }
 
   private async handleConfigChange() {
-    this.logger.warn('Server configuration file was changed.')
+    this.logger.warn('Server configuration changed, reloading configuration...')
 
     try {
       await this.loadConfig()
