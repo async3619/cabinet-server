@@ -265,6 +265,8 @@ export class WatcherService
       data: { threadId, watcher: { connect: { id: watcherId } } },
     })
 
+    this.crawlerService.cleanUpObsoleteEntities().then()
+
     return true
   }
 

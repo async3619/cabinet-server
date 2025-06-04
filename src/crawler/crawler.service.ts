@@ -263,7 +263,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     })()
   }
 
-  private async cleanUpObsoleteEntities() {
+  async cleanUpObsoleteEntities() {
     this.logger.log('Now try to delete obsolete entities')
 
     const excludedThreads = await this.watcherService.getExcludedThreads()
