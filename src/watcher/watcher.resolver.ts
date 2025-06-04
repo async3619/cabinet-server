@@ -50,6 +50,14 @@ export class WatcherResolver {
     return this.watcherService.registerThread(url, watcherId)
   }
 
+  @Mutation(() => Boolean)
+  async excludeThreadFromWatcher(
+    @Args('threadId', { type: () => String }) threadId: string,
+    @Args('watcherId', { type: () => Int }) watcherId: number,
+  ) {
+    return this.watcherService.excludeThread(threadId, watcherId)
+  }
+
   @ResolveField(() => [Thread])
   async threads(@Root() watcher: Watcher, @Args() args: FindManyThreadArgs) {
     return this.watcherService
