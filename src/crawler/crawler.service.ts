@@ -266,9 +266,15 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
   private async cleanUpObsoleteEntities() {
     this.logger.log('Now try to delete obsolete entities')
 
-    const archivedThreads = await this.threadService.find({
-      where: { isArchived: true },
+    const excludedThreads = await this.watcherService.getExcludedThreads()
+    const excludedThreadIdMap = _.chain(excludedThreads)
+      .groupBy((item) => item.watcherId)
+      .mapValues((items) => items.map((item) => item.threadId))
+      .value()
+
+    const threads = await this.threadService.find({
       include: {
+        watchers: true,
         watcherThreads: true,
         board: true,
         attachments: {
@@ -290,8 +296,13 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
       },
     })
 
-    const obsoleteThreads = archivedThreads.filter((thread) => {
+    const obsoleteThreads = threads.filter((thread) => {
+      const isExcludedFromAllWatchers = thread.watchers.every((watcher) =>
+        excludedThreadIdMap[watcher.id].includes(thread.id),
+      )
+
       return (
+        (thread.isArchived || isExcludedFromAllWatchers) &&
         thread.watcherThreads.length <= 0 &&
         !this.crawlers.some((watcher) => {
           return CRAWLER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
