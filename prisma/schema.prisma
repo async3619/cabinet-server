@@ -102,9 +102,10 @@ model Watcher {
   name String
   type String
 
-  threads        Thread[]
-  attachments    Attachment[]
-  watcherThreads WatcherThread[]
+  threads         Thread[]
+  attachments     Attachment[]
+  watcherThreads  WatcherThread[]
+  excludedThreads ExcludedThread[]
 }
 
 model WatcherThread {
@@ -117,6 +118,14 @@ model WatcherThread {
 
   thread   Thread? @relation(fields: [threadId], references: [id])
   threadId String?
+}
+
+model ExcludedThread {
+  id       Int    @id @default(autoincrement())
+  threadId String
+
+  watcher   Watcher @relation(fields: [watcherId], references: [id])
+  watcherId Int
 }
 
 model Statistic {
