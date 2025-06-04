@@ -297,8 +297,9 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     })
 
     const obsoleteThreads = threads.filter((thread) => {
-      const isExcludedFromAllWatchers = thread.watchers.every((watcher) =>
-        excludedThreadIdMap[watcher.id].includes(thread.id),
+      const isExcludedFromAllWatchers = thread.watchers.every(
+        (watcher) =>
+          excludedThreadIdMap[watcher.id]?.includes(thread.id) ?? false,
       )
 
       return (
