@@ -302,8 +302,12 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
           excludedThreadIdMap[watcher.id]?.includes(thread.id) ?? false,
       )
 
+      if (isExcludedFromAllWatchers) {
+        return true
+      }
+
       return (
-        (thread.isArchived || isExcludedFromAllWatchers) &&
+        thread.isArchived &&
         thread.watcherThreads.length <= 0 &&
         !this.crawlers.some((watcher) => {
           return CRAWLER_CONSTRUCTOR_MAP[watcher.entity.type].checkIfMatched(
