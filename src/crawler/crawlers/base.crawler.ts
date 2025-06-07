@@ -26,7 +26,10 @@ export abstract class BaseCrawler<
     readonly entity: Watcher,
   ) {}
 
-  abstract watch(watcherThreads: WatcherThread[]): Promise<CrawlerResult>
+  abstract watch(
+    watcherThreads: WatcherThread[],
+    excludedThreadIds: string[],
+  ): Promise<CrawlerResult>
 
   abstract getActualUrl(url: string): string | null
 }

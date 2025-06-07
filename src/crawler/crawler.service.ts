@@ -154,11 +154,22 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
           const attachmentWatcherMap: Record<string, Watcher[]> = {}
 
           for (const watcher of this.crawlers) {
+            const excludedThreadIds = await this.watcherService
+              .getExcludedThreads()
+              .then((items) =>
+                items
+                  .filter((item) => item.watcherId === watcher.entity.id)
+                  .map((item) => item.threadId),
+              )
+
             const watcherThreads = await this.watcherService.getWatcherThreads(
               watcher.entity,
             )
 
-            const result = await watcher.watch(watcherThreads)
+            const result = await watcher.watch(
+              watcherThreads,
+              excludedThreadIds,
+            )
 
             const archivedWatcherThreads = watcherThreads.filter(
               (item) => !watcherThreadIdMap[item.id],
