@@ -57,7 +57,7 @@ export class PostResolver {
       .board()
   }
 
-  @Query(() => PostCount)
+  @ResolveField(() => PostCount)
   async _count(@Root() post: Post): Promise<PostCount> {
     const result = await this.postService.findOne({
       select: { _count: true },
