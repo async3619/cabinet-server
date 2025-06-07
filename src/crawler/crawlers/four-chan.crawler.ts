@@ -151,7 +151,10 @@ export class FourChanCrawler extends BaseCrawler<
     return null
   }
 
-  async watch(watcherThreads: WatcherThread[]): Promise<CrawlerResult> {
+  async watch(
+    watcherThreads: WatcherThread[],
+    excludedThreadIds: string[],
+  ): Promise<CrawlerResult> {
     const matchedThreads: Record<string, RawThread<'four-chan'>> = {}
     const watcherThreadMap: Record<number, string> = {}
     const allBoards = await this.provider.getAllBoards()
@@ -277,7 +280,10 @@ export class FourChanCrawler extends BaseCrawler<
 
     for (const [entry, threads] of entryThreadPairs) {
       const filteredThreads = threads.filter((thread) => {
-        return FourChanCrawler.checkIfMatched({ entries: [entry] }, thread)
+        return (
+          FourChanCrawler.checkIfMatched({ entries: [entry] }, thread) &&
+          !excludedThreadIds.includes(getThreadUniqueId(thread))
+        )
       })
 
       for (const thread of filteredThreads) {
