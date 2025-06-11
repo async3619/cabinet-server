@@ -11,12 +11,17 @@ export class DownloadError extends Error {
   }
 }
 
-export async function downloadFile(url: string, path: string) {
+export async function downloadFile(
+  url: string,
+  path: string,
+  headers?: Record<string, string>,
+) {
   const stream = fs.createWriteStream(path)
   const response = await fetch(url, {
     headers: {
       'User-Agent':
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+      ...headers,
     },
   })
   if (!response.ok) {
