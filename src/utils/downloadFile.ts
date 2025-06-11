@@ -16,11 +16,13 @@ export async function downloadFile(
   path: string,
   headers?: Record<string, string>,
 ) {
+  const parsedUrl = new URL(url)
   const stream = fs.createWriteStream(path)
   const response = await fetch(url, {
     headers: {
       'User-Agent':
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+      'Alt-Used': parsedUrl.host,
       ...headers,
     },
   })
