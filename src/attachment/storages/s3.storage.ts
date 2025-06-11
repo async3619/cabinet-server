@@ -137,7 +137,13 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
 
   private async uploadFromUrl(fileUrl: string, destinationUri: string) {
     const { key, bucketName } = this.parseUri(destinationUri)
-    const response = await fetch(fileUrl)
+    const response = await fetch(fileUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+      },
+    })
+
     if (!response.ok) {
       throw new DownloadError(await response.text(), response.status)
     }
