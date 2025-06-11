@@ -6,6 +6,7 @@ import type { RawBoard } from '@/crawler/types/board'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
 import { HTTPClient } from '@/utils/fetcher'
+import { generateCookie } from '@/utils/generateCookie'
 
 export class FourChanProvider extends BaseProvider<'four-chan'> {
   private readonly fetcher: HTTPClient<FourChanAPIEndpoints>
@@ -34,6 +35,11 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
       params: { code: board.code },
     })
 
+    const cookies = generateCookie([
+      ['__cf_bm', this.options.cloudflare?.bm],
+      ['cf_clearance', this.options.cloudflare?.clearance],
+    ])
+
     return allPages
       .flatMap((page) => page.threads)
       .map((thread) => ({
@@ -56,6 +62,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                   createdAt: thread.tim,
                   size: thread.fsize,
                   url: `https://i.4cdn.org/${board.code}/${thread.tim}${thread.ext}`,
+                  headers: { Cookie: cookies },
                   thumbnail: {
                     board,
                     name: `${thread.tim}s`,
@@ -64,6 +71,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                     height: thread.tn_h,
                     createdAt: thread.tim,
                     url: `https://i.4cdn.org/${board.code}/${thread.tim}s.jpg`,
+                    headers: { Cookie: cookies },
                   },
                 } satisfies RawAttachment<'four-chan'>,
               ]
@@ -80,6 +88,11 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
         no: thread.no.toString(),
       },
     })
+
+    const cookies = generateCookie([
+      ['__cf_bm', this.options.cloudflare?.bm],
+      ['cf_clearance', this.options.cloudflare?.clearance],
+    ])
 
     return posts.map((post) => ({
       thread,
@@ -102,6 +115,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                 createdAt: post.tim,
                 size: post.fsize,
                 url: `https://i.4cdn.org/${thread.board.code}/${post.tim}${post.ext}`,
+                headers: { Cookie: cookies },
                 thumbnail: {
                   board: thread.board,
                   name: `${post.tim}s`,
@@ -110,6 +124,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                   height: post.tn_h,
                   createdAt: post.tim,
                   url: `https://i.4cdn.org/${thread.board.code}/${post.tim}s.jpg`,
+                  headers: { Cookie: cookies },
                 },
               } satisfies RawAttachment<'four-chan'>,
             ]
@@ -127,6 +142,11 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
         no: threadId.toString(),
       },
     })
+
+    const cookies = generateCookie([
+      ['__cf_bm', this.options.cloudflare?.bm],
+      ['cf_clearance', this.options.cloudflare?.clearance],
+    ])
 
     const rawThread = posts[0]
     return {
@@ -149,6 +169,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                 createdAt: rawThread.tim,
                 size: rawThread.fsize,
                 url: `https://i.4cdn.org/${board.code}/${rawThread.tim}${rawThread.ext}`,
+                headers: { Cookie: cookies },
                 thumbnail: {
                   board,
                   name: `${rawThread.tim}s`,
@@ -157,6 +178,7 @@ export class FourChanProvider extends BaseProvider<'four-chan'> {
                   height: rawThread.tn_h,
                   createdAt: rawThread.tim,
                   url: `https://i.4cdn.org/${board.code}/${rawThread.tim}s.jpg`,
+                  headers: { Cookie: cookies },
                 },
               } satisfies RawAttachment<'four-chan'>,
             ]
