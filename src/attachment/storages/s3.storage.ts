@@ -148,6 +148,7 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
         'Alt-Used': parsedFileUrl.host,
+        'Upgrade-Insecure-Requests': '1',
       },
     })
 
