@@ -29,6 +29,10 @@ interface FourChanCrawlerEntry {
 
 export interface FourChanCrawlerOptions
   extends BaseCrawlerOptions<'four-chan'> {
+  cloudflare?: {
+    bm: string
+    clearance: string
+  }
   endpoint: string
   entries: FourChanCrawlerEntry[]
 }

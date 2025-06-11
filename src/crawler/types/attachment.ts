@@ -6,6 +6,7 @@ export interface RawAttachment<TProviderName extends string> {
   createdAt: number
   extension: string
   hash?: string
+  headers?: Record<string, string>
   height: number
   name: string
   size?: number
