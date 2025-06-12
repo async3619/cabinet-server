@@ -20,8 +20,6 @@ export async function downloadFile(
   const stream = fs.createWriteStream(path)
   const response = await fetch(url, {
     headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
       'Alt-Used': parsedUrl.host,
       'Upgrade-Insecure-Requests': '1',
       ...headers,
@@ -37,3 +35,11 @@ export async function downloadFile(
 
   await finished(Readable.fromWeb(response.body as any).pipe(stream))
 }
+
+/**
+ curl -i \
+ -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0" \
+ -H "Alt-Used: https://i.4cdn.org" \
+ -H "Upgrade-Insecure-Requests: 1" \
+ https://i.4cdn.org/wsg/1748784299690437.mp4
+ */
