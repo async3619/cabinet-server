@@ -12,6 +12,8 @@ import * as _ from 'lodash'
 import * as pluralize from 'pluralize'
 import prettyMilliseconds from 'pretty-ms'
 
+import { ActivityLogService } from '@/activity-log/activity-log.service'
+import type { WatcherResult } from '@/activity-log/types/activity-log'
 import { AttachmentService } from '@/attachment/attachment.service'
 import { BoardService } from '@/board/board.service'
 import { ConfigService } from '@/config/config.service'
@@ -48,6 +50,8 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     @Inject(PostService) private readonly postService: PostService,
     @Inject(AttachmentService)
     private readonly attachmentService: AttachmentService,
+    @Inject(ActivityLogService)
+    private readonly activityLogService: ActivityLogService,
     @Inject(SchedulerRegistry)
     private readonly schedulerRegistry: SchedulerRegistry,
   ) {}
@@ -134,101 +138,132 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
   async doCrawl(): Promise<void> {
     this.crawlingPromise = (async () => {
+      const { id: activityId } =
+        await this.activityLogService.startActivity('crawling')
+
       this.logger.log(
-        `Starting crawling task for ${this.crawlers.length} watchers`,
+        `Starting crawling task for ${this.crawlers.length} watchers (Activity ID: ${activityId})`,
       )
 
-      await this.threadService.updateMany({
-        data: { isArchived: true },
-      })
+      let errorMessage: string | undefined
 
-      const [elapsedTime, { posts, threads, boards, attachments }] =
-        await stopwatch(async () => {
+      try {
+        await this.threadService.updateMany({
+          data: { isArchived: true },
+        })
+
+        const [
+          elapsedTime,
+          { posts, threads, boards, attachments, watcherResults },
+        ] = await stopwatch(async () => {
           let boards: Record<string, RawBoard<string>> = {}
           let threads: Record<string, RawThread<string>> = {}
           let posts: Record<string, RawPost<string>> = {}
           let attachments: Record<string, RawAttachment<string>> = {}
           let watcherThreadIdMap: Record<number, string> = {}
+          const watcherResults: Record<string, WatcherResult> = {}
 
           const threadWatcherMap: Record<string, Watcher[]> = {}
           const attachmentWatcherMap: Record<string, Watcher[]> = {}
 
           for (const watcher of this.crawlers) {
-            const excludedThreadIds = await this.watcherService
-              .getExcludedThreads()
-              .then((items) =>
-                items
-                  .filter((item) => item.watcherId === watcher.entity.id)
-                  .map((item) => item.threadId),
+            try {
+              const excludedThreadIds = await this.watcherService
+                .getExcludedThreads()
+                .then((items) =>
+                  items
+                    .filter((item) => item.watcherId === watcher.entity.id)
+                    .map((item) => item.threadId),
+                )
+
+              const watcherThreads =
+                await this.watcherService.getWatcherThreads(watcher.entity)
+
+              const result = await watcher.watch(
+                watcherThreads,
+                excludedThreadIds,
               )
 
-            const watcherThreads = await this.watcherService.getWatcherThreads(
-              watcher.entity,
-            )
+              watcherResults[watcher.entity.name] = {
+                threadsFound: result.threads.length,
+                postsFound: result.posts.length,
+                attachmentsFound: _.chain(result.threads)
+                  .concat(result.posts)
+                  .flatMap((item) => item.attachments)
+                  .value().length,
+                isSuccessful: true,
+              }
 
-            const result = await watcher.watch(
-              watcherThreads,
-              excludedThreadIds,
-            )
-
-            const archivedWatcherThreads = watcherThreads.filter(
-              (item) => !watcherThreadIdMap[item.id],
-            )
-
-            await this.watcherService.markWatcherThreadsAsArchived(
-              archivedWatcherThreads,
-            )
-
-            watcherThreadIdMap = {
-              ...watcherThreadIdMap,
-              ...result.watcherThreadIdMap,
-            }
-
-            for (const thread of result.threads) {
-              const id = getThreadUniqueId(thread)
-              threadWatcherMap[id] ??= []
-              threadWatcherMap[id].push(watcher.entity)
-            }
-
-            const allAttachments = _.chain(result.threads)
-              .concat(result.posts)
-              .flatMap((item) => item.attachments)
-              .value()
-
-            for (const attachment of allAttachments) {
-              const id = getAttachmentUniqueId(attachment)
-              attachmentWatcherMap[id] ??= []
-              attachmentWatcherMap[id].push(watcher.entity)
-            }
-
-            boards = _.chain(result.boards)
-              .map((board) => [getBoardUniqueId(board), board] as const)
-              .fromPairs()
-              .merge(boards)
-              .value()
-
-            threads = _.chain(result.threads)
-              .map((thread) => [getThreadUniqueId(thread), thread] as const)
-              .fromPairs()
-              .merge(threads)
-              .value()
-
-            posts = _.chain(result.posts)
-              .map((post) => [getPostUniqueId(post), post])
-              .fromPairs()
-              .merge(posts)
-              .value()
-
-            attachments = _.chain(result.threads)
-              .concat(result.posts)
-              .flatMap((item) => item.attachments)
-              .map(
-                (attachment) =>
-                  [getAttachmentUniqueId(attachment), attachment] as const,
+              const archivedWatcherThreads = watcherThreads.filter(
+                (item) => !watcherThreadIdMap[item.id],
               )
-              .fromPairs()
-              .merge(attachments)
-              .value()
+
+              await this.watcherService.markWatcherThreadsAsArchived(
+                archivedWatcherThreads,
+              )
+
+              watcherThreadIdMap = {
+                ...watcherThreadIdMap,
+                ...result.watcherThreadIdMap,
+              }
+
+              for (const thread of result.threads) {
+                const id = getThreadUniqueId(thread)
+                threadWatcherMap[id] ??= []
+                threadWatcherMap[id].push(watcher.entity)
+              }
+
+              const allAttachments = _.chain(result.threads)
+                .concat(result.posts)
+                .flatMap((item) => item.attachments)
+                .value()
+
+              for (const attachment of allAttachments) {
+                const id = getAttachmentUniqueId(attachment)
+                attachmentWatcherMap[id] ??= []
+                attachmentWatcherMap[id].push(watcher.entity)
+              }
+
+              boards = _.chain(result.boards)
+                .map((board) => [getBoardUniqueId(board), board] as const)
+                .fromPairs()
+                .merge(boards)
+                .value()
+
+              threads = _.chain(result.threads)
+                .map((thread) => [getThreadUniqueId(thread), thread] as const)
+                .fromPairs()
+                .merge(threads)
+                .value()
+
+              posts = _.chain(result.posts)
+                .map((post) => [getPostUniqueId(post), post])
+                .fromPairs()
+                .merge(posts)
+                .value()
+
+              attachments = _.chain(result.threads)
+                .concat(result.posts)
+                .flatMap((item) => item.attachments)
+                .map(
+                  (attachment) =>
+                    [getAttachmentUniqueId(attachment), attachment] as const,
+                )
+                .fromPairs()
+                .merge(attachments)
+                .value()
+            } catch (watcherError) {
+              this.logger.error(
+                `Failed to crawl watcher ${watcher.entity.name}: ${watcherError}`,
+              )
+              watcherResults[watcher.entity.name] = {
+                threadsFound: 0,
+                postsFound: 0,
+                attachmentsFound: 0,
+                isSuccessful: false,
+                errorMessage: String(watcherError),
+              }
+            }
           }
 
           await this.boardService.upsertMany(Object.values(boards))
@@ -244,32 +279,64 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
           await this.watcherService.connectWatcherThreads(watcherThreadIdMap)
 
-          return { boards, threads, posts, attachments }
+          return { boards, threads, posts, attachments, watcherResults }
         })
 
-      const boardCount = Object.keys(boards).length
-      const threadCount = Object.keys(threads).length
-      const postCount = Object.keys(posts).length
-      const attachmentCount = Object.keys(attachments).length
+        const boardCount = Object.keys(boards).length
+        const threadCount = Object.keys(threads).length
+        const postCount = Object.keys(posts).length
+        const attachmentCount = Object.keys(attachments).length
 
-      const tokens = [
-        `${boardCount.toString()} ${pluralize('board', boardCount)}`,
-        `${threadCount.toString()} ${pluralize('thread', threadCount)}`,
-        `${postCount.toString()} ${pluralize('post', postCount)}`,
-        `${attachmentCount.toString()} ${pluralize('attachment', attachmentCount)}`,
-      ].map((token) => `  - ${chalk.blue(token)}`)
+        const tokens = [
+          `${boardCount.toString()} ${pluralize('board', boardCount)}`,
+          `${threadCount.toString()} ${pluralize('thread', threadCount)}`,
+          `${postCount.toString()} ${pluralize('post', postCount)}`,
+          `${attachmentCount.toString()} ${pluralize('attachment', attachmentCount)}`,
+        ].map((token) => `  - ${chalk.blue(token)}`)
 
-      this.logger.log(`Successfully finished crawling task with:`)
-      for (const token of tokens) {
-        this.logger.log(token)
-      }
+        this.logger.log(`Successfully finished crawling task with:`)
+        for (const token of tokens) {
+          this.logger.log(token)
+        }
 
-      this.logger.log(
-        `This crawling task took ${chalk.blue(prettyMilliseconds(elapsedTime, { verbose: true }))}`,
-      )
+        this.logger.log(
+          `This crawling task took ${chalk.blue(prettyMilliseconds(elapsedTime, { verbose: true }))}`,
+        )
 
-      if (this.configService.crawling.deleteObsolete) {
-        await this.cleanUpObsoleteEntities()
+        if (this.configService.crawling.deleteObsolete) {
+          await this.cleanUpObsoleteEntities()
+        }
+
+        await this.activityLogService.finishActivity(activityId, {
+          isSuccess: true,
+          crawlingResult: {
+            threadsCreated: threadCount,
+            postsCreated: postCount,
+            attachmentsCreated: attachmentCount,
+            boardsProcessed: boardCount,
+            watcherResults: Object.entries(watcherResults).map(
+              ([watcherName, result]) => ({
+                watcherName,
+                threadsFound: result.threadsFound,
+                postsFound: result.postsFound,
+                attachmentsFound: result.attachmentsFound,
+                isSuccessful: result.isSuccessful,
+                errorMessage: result.errorMessage,
+              }),
+            ),
+          },
+        })
+      } catch (error) {
+        errorMessage = String(error)
+
+        this.logger.error(`Crawling task failed: ${error}`)
+
+        await this.activityLogService.finishActivity(activityId, {
+          isSuccess: false,
+          errorMessage,
+        })
+
+        throw error
       }
     })()
   }
