@@ -14,11 +14,45 @@ import type { WatcherThread } from '@/crawler/types/watcher-thread'
 import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
-interface QueryItem {
-  caseInsensitive?: boolean
+interface BaseQueryItem {
   exclude?: boolean
   query: string
 }
+
+// 설정용 타입 정의 (type 필수)
+interface TextQueryItem extends BaseQueryItem {
+  caseInsensitive?: boolean
+  type: 'text'
+}
+
+interface RegexQueryItem extends BaseQueryItem {
+  dotAll?: boolean
+  ignoreCase?: boolean
+  multiline?: boolean
+  type: 'regex'
+  unicode?: boolean
+}
+
+type QueryItem = TextQueryItem | RegexQueryItem
+
+interface CompiledTextQueryItem extends BaseQueryItem {
+  caseInsensitive?: boolean
+  type: 'text'
+}
+
+interface CompiledRegexQueryItem extends BaseQueryItem {
+  compiledRegex: RegExp | null
+  flags: {
+    dotAll?: boolean
+    ignoreCase?: boolean
+    multiline?: boolean
+    unicode?: boolean
+  }
+  originalPattern: string
+  type: 'regex'
+}
+
+type CompiledQueryItem = CompiledTextQueryItem | CompiledRegexQueryItem
 
 interface FourChanCrawlerEntry {
   boards: string[]
@@ -53,6 +87,75 @@ export class FourChanCrawler extends BaseCrawler<
   private readonly logger = new Logger(FourChanCrawler.name)
   private readonly provider: FourChanProvider
 
+  private static compileQueryItems(queries: QueryItem[]) {
+    return queries.map<CompiledQueryItem>((item) => {
+      if (item.type === 'text') {
+        return {
+          exclude: item.exclude,
+          query: item.query,
+          type: 'text',
+          caseInsensitive: item.caseInsensitive,
+        }
+      } else {
+        const flags = {
+          ignoreCase: item.ignoreCase,
+          multiline: item.multiline,
+          dotAll: item.dotAll,
+          unicode: item.unicode,
+        }
+
+        let compiledRegex: RegExp | null = null
+        try {
+          let flagString = ''
+          if (flags.ignoreCase) flagString += 'i'
+          if (flags.multiline) flagString += 'm'
+          if (flags.dotAll) flagString += 's'
+          if (flags.unicode) flagString += 'u'
+
+          compiledRegex = new RegExp(item.query, flagString)
+        } catch {
+          // ignored
+        }
+
+        return {
+          exclude: item.exclude,
+          query: item.query,
+          originalPattern: item.query,
+          type: 'regex',
+          compiledRegex,
+          flags,
+        }
+      }
+    })
+  }
+
+  private static matchesText(
+    text: string | null | undefined,
+    queryItem: CompiledQueryItem,
+  ): boolean {
+    if (!text) return false
+
+    if (queryItem.type === 'regex') {
+      if (queryItem.compiledRegex) {
+        return queryItem.compiledRegex.test(text)
+      } else {
+        const searchText = queryItem.flags.ignoreCase
+          ? queryItem.originalPattern.toLowerCase()
+          : queryItem.originalPattern
+        const targetText = queryItem.flags.ignoreCase
+          ? text.toLowerCase()
+          : text
+        return targetText.includes(searchText)
+      }
+    } else {
+      const searchText = queryItem.caseInsensitive
+        ? queryItem.query.toLowerCase()
+        : queryItem.query
+      const targetText = queryItem.caseInsensitive ? text.toLowerCase() : text
+      return targetText.includes(searchText)
+    }
+  }
+
   static checkIfMatched(
     {
       entries,
@@ -72,36 +175,24 @@ export class FourChanCrawler extends BaseCrawler<
       const title = thread.title
       const content = thread.content
 
-      const allQueries = entry.queries.map((item) => ({
-        ...item,
-        query: item.caseInsensitive ? item.query.toLowerCase() : item.query,
-      }))
+      const allQueries: CompiledQueryItem[] = FourChanCrawler.compileQueryItems(
+        entry.queries,
+      )
 
       const includeQueries = allQueries.filter((item) => !item.exclude)
       const excludeQueries = allQueries.filter((item) => item.exclude)
 
       const titleMatched = includeQueries.some((item) =>
-        item.caseInsensitive
-          ? title?.toLowerCase().includes(item.query)
-          : title?.includes(item.query),
+        FourChanCrawler.matchesText(title, item),
       )
-
       const contentMatched = includeQueries.some((item) =>
-        item.caseInsensitive
-          ? content?.toLowerCase().includes(item.query)
-          : content?.includes(item.query),
+        FourChanCrawler.matchesText(content, item),
       )
-
       const titleExcluded = excludeQueries.some((item) =>
-        item.caseInsensitive
-          ? title?.toLowerCase().includes(item.query)
-          : title?.includes(item.query),
+        FourChanCrawler.matchesText(title, item),
       )
-
       const contentExcluded = excludeQueries.some((item) =>
-        item.caseInsensitive
-          ? content?.toLowerCase().includes(item.query)
-          : content?.includes(item.query),
+        FourChanCrawler.matchesText(content, item),
       )
 
       if (target === 'title') {
