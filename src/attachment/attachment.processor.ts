@@ -3,6 +3,8 @@ import { Inject, Logger } from '@nestjs/common'
 import { Job } from 'bullmq'
 import { filesize } from 'filesize'
 
+import { ActivityLogService } from '@/activity-log/activity-log.service'
+import type { ActivityStartResult } from '@/activity-log/types/activity-log'
 import { AttachmentService } from '@/attachment/attachment.service'
 import { ConfigService } from '@/config/config.service'
 import {
@@ -32,6 +34,8 @@ export class AttachmentProcessor extends WorkerHost {
     @Inject(ConfigService) private readonly configService: ConfigService,
     @Inject(AttachmentService)
     private readonly attachmentService: AttachmentService,
+    @Inject(ActivityLogService)
+    private readonly activityLogService: ActivityLogService,
   ) {
     super()
   }
@@ -105,40 +109,101 @@ export class AttachmentProcessor extends WorkerHost {
       return
     }
 
-    while (true) {
-      try {
-        const {
-          fileUri,
-          thumbnailUri: thumbnailFileUri,
-          mime,
-        } = await this.attachmentService.storage.save(attachment)
+    let activityLog: ActivityStartResult | null = null
+    const downloadStartTime = Date.now()
+    let retryCount = 0
 
-        await this.attachmentService.update({
-          where: { id: uniqueId },
-          data: { fileUri, thumbnailFileUri, mime },
-        })
+    try {
+      activityLog = await this.activityLogService.startActivity(
+        `attachment-download:${uniqueId}`,
+      )
 
-        this.logger.log(`Successfully downloaded file ${fileInformation}`)
+      while (true) {
+        try {
+          const {
+            fileUri,
+            thumbnailUri: thumbnailFileUri,
+            mime,
+          } = await this.attachmentService.storage.save(attachment)
 
-        await sleep(downloadThrottle.download)
-        break
-      } catch (e) {
-        if (e instanceof DownloadError && e.statusCode === 429) {
-          this.logger.warn(
-            `Failed to download file ${fileInformation} with error code 429 (Too Many Requests)`,
-          )
+          await this.attachmentService.update({
+            where: { id: uniqueId },
+            data: { fileUri, thumbnailFileUri, mime },
+          })
 
-          await sleep(downloadThrottle.failover)
-          continue
+          this.logger.log(`Successfully downloaded file ${fileInformation}`)
+
+          await this.activityLogService.finishActivity(activityLog.id, {
+            type: 'attachment-download',
+            attachmentDownloadResult: {
+              attachmentId: uniqueId,
+              name: attachment.name,
+              width: attachment.width,
+              height: attachment.height,
+              extension: attachment.extension,
+              fileSize: attachment.size,
+              mimeType: mime,
+              downloadDurationMs: Date.now() - downloadStartTime,
+              fileUri,
+              thumbnailGenerated: Boolean(thumbnailFileUri),
+              retryCount,
+            },
+            isSuccess: true,
+          })
+
+          await sleep(downloadThrottle.download)
+          break
+        } catch (e) {
+          if (e instanceof DownloadError && e.statusCode === 429) {
+            retryCount++
+            this.logger.warn(
+              `Failed to download file ${fileInformation} with error code 429 (Too Many Requests), retry count: ${retryCount}`,
+            )
+
+            await sleep(downloadThrottle.failover)
+            continue
+          }
+
+          throw e
         }
-
-        if (e instanceof Error) {
-          this.logger.error('Downloading attachment failed with error:')
-          this.logger.error(e)
-        }
-
-        throw e
       }
+    } catch (e) {
+      if (activityLog) {
+        const httpStatusCode =
+          typeof e === 'object' &&
+          !!e &&
+          'statusCode' in e &&
+          typeof e.statusCode === 'number'
+            ? e.statusCode
+            : undefined
+
+        await this.activityLogService.finishActivity(activityLog.id, {
+          type: 'attachment-download',
+          attachmentDownloadResult: {
+            attachmentId: uniqueId,
+            name: attachment.name,
+            width: attachment.width,
+            height: attachment.height,
+            extension: attachment.extension,
+            fileSize: attachment.size,
+            mimeType: undefined,
+            downloadDurationMs: Date.now() - downloadStartTime,
+            fileUri: undefined,
+            thumbnailGenerated: false,
+            retryCount,
+            httpStatusCode,
+          },
+          errorMessage: e instanceof Error ? e.message : String(e),
+          isSuccess: false,
+        })
+      }
+
+      if (e instanceof Error) {
+        this.logger.error('Downloading attachment failed with error:')
+        this.logger.error(e)
+      }
+
+      throw e
     }
   }
 

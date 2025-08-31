@@ -308,6 +308,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
         }
 
         await this.activityLogService.finishActivity(activityId, {
+          type: 'crawling',
           isSuccess: true,
           crawlingResult: {
             threadsCreated: threadCount,
@@ -332,6 +333,7 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
         this.logger.error(`Crawling task failed: ${error}`)
 
         await this.activityLogService.finishActivity(activityId, {
+          type: 'crawling',
           isSuccess: false,
           errorMessage,
         })
