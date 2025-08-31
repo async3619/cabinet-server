@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import type {
   ActivityFinishData,
   ActivityStartResult,
+  AttachmentDownloadLogData,
   CrawlingLogData,
 } from '@/activity-log/types/activity-log'
 import { EntityBaseService } from '@/common/entity-base.service'
@@ -36,19 +37,19 @@ export class ActivityLogService extends EntityBaseService<'activityLog'> {
   }
 
   async finishActivity(activityId: number, data: ActivityFinishData) {
-    const endTime = new Date()
-    const updateData = this.buildActivityUpdateData(data, endTime)
-
     const activityLog = await this.update({
       where: { id: activityId },
-      data: updateData,
-      include: {
-        crawlingResult: {
-          include: {
-            watcherResults: true,
-          },
-        },
-      },
+      data: this.buildActivityUpdateData(data, new Date()),
+      include:
+        data.type === 'crawling'
+          ? {
+              crawlingResult: {
+                include: {
+                  watcherResults: true,
+                },
+              },
+            }
+          : {},
     })
 
     this.logger.log(
@@ -61,23 +62,53 @@ export class ActivityLogService extends EntityBaseService<'activityLog'> {
   private buildActivityUpdateData(data: ActivityFinishData, endTime: Date) {
     const baseData = { endTime }
 
-    if (data.isSuccess) {
+    if (data.type === 'crawling') {
+      if (data.isSuccess) {
+        return {
+          ...baseData,
+          isSuccess: true,
+          errorMessage: undefined,
+          crawlingResult: {
+            create: this.buildCrawlingResultData(data.crawlingResult),
+          },
+        }
+      }
+
       return {
         ...baseData,
-        isSuccess: true,
-        errorMessage: undefined,
-        crawlingResult: {
-          create: this.buildCrawlingResultData(data.crawlingResult),
+        isSuccess: false,
+        errorMessage: data.errorMessage,
+        crawlingResult: undefined,
+      }
+    }
+
+    if (data.type === 'attachment-download') {
+      if (data.isSuccess) {
+        return {
+          ...baseData,
+          isSuccess: true,
+          errorMessage: undefined,
+          attachmentDownloadResult: {
+            create: this.buildAttachmentDownloadResultData(
+              data.attachmentDownloadResult,
+            ),
+          },
+        }
+      }
+
+      return {
+        ...baseData,
+        isSuccess: false,
+        errorMessage: data.errorMessage,
+        attachmentDownloadResult: {
+          create: this.buildAttachmentDownloadResultData(
+            data.attachmentDownloadResult,
+          ),
         },
       }
     }
 
-    return {
-      ...baseData,
-      isSuccess: false,
-      errorMessage: data.errorMessage,
-      crawlingResult: undefined,
-    }
+    throw new Error(`Unknown activity data type: ${(data as any).type}`)
   }
 
   private buildCrawlingResultData(crawlingResult: CrawlingLogData) {
@@ -96,6 +127,25 @@ export class ActivityLogService extends EntityBaseService<'activityLog'> {
           errorMessage: result.errorMessage,
         })),
       },
+    }
+  }
+
+  private buildAttachmentDownloadResultData(
+    downloadResult: AttachmentDownloadLogData,
+  ) {
+    return {
+      attachmentId: downloadResult.attachmentId,
+      name: downloadResult.name,
+      width: downloadResult.width,
+      height: downloadResult.height,
+      extension: downloadResult.extension,
+      fileSize: downloadResult.fileSize,
+      mimeType: downloadResult.mimeType,
+      downloadDurationMs: downloadResult.downloadDurationMs,
+      fileUri: downloadResult.fileUri,
+      thumbnailGenerated: downloadResult.thumbnailGenerated,
+      retryCount: downloadResult.retryCount,
+      httpStatusCode: downloadResult.httpStatusCode,
     }
   }
 }

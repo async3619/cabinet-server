@@ -150,7 +150,8 @@ model ActivityLog {
 
   createdAt DateTime @default(now())
 
-  crawlingResult CrawlingResult?
+  crawlingResult           CrawlingResult?
+  attachmentDownloadResult AttachmentDownloadResult?
 }
 
 model CrawlingResult {
@@ -179,4 +180,24 @@ model WatcherResult {
 
   crawlingResult   CrawlingResult @relation(fields: [crawlingResultId], references: [id], onDelete: Cascade)
   crawlingResultId Int
+}
+
+model AttachmentDownloadResult {
+  id Int @id @default(autoincrement())
+
+  attachmentId         String
+  name                 String
+  width                Int
+  height               Int
+  extension            String
+  fileSize             Int?
+  mimeType             String?
+  downloadDurationMs   Int?
+  fileUri              String?
+  thumbnailGenerated   Boolean @default(false)
+  retryCount           Int     @default(0)
+  httpStatusCode       Int?
+
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+  activityLogId Int         @unique
 }
