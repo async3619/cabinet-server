@@ -156,7 +156,6 @@ export class WatcherService
     const watcher = await this.prisma.watcher.findUnique({
       where: { id: watcherId },
     })
-
     if (!watcher) {
       throw new Error(`Watcher with ID '${watcherId}' not found`)
     }
@@ -250,6 +249,30 @@ export class WatcherService
       data: {
         isArchived: true,
       },
+    })
+  }
+
+  async excludeThread(threadId: string, watcherId: number) {
+    const watcher = await this.prisma.watcher.findUnique({
+      where: { id: watcherId },
+    })
+
+    if (!watcher) {
+      throw new Error(`Watcher with ID '${watcherId}' not found`)
+    }
+
+    await this.prisma.excludedThread.create({
+      data: { threadId, watcher: { connect: { id: watcherId } } },
+    })
+
+    this.crawlerService.cleanUpObsoleteEntities().then()
+
+    return true
+  }
+
+  async getExcludedThreads() {
+    return this.prisma.excludedThread.findMany({
+      include: { watcher: true },
     })
   }
 }

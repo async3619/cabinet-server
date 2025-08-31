@@ -3,10 +3,8 @@
   "entry": ["src/main.ts"],
   "project": ["src/**/*.ts"],
   "ignoreDependencies": [
-    "@types/express",
     "source-map-support",
     "ts-loader",
-    "graphql-scalars",
     "prisma-nestjs-graphql",
     "@semantic-release/*",
     "conventional-changelog-conventionalcommits"

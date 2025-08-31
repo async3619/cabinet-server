@@ -135,9 +135,21 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
     )
   }
 
-  private async uploadFromUrl(fileUrl: string, destinationUri: string) {
+  private async uploadFromUrl(
+    fileUrl: string,
+    destinationUri: string,
+    headers?: Record<string, string>,
+  ) {
     const { key, bucketName } = this.parseUri(destinationUri)
-    const response = await fetch(fileUrl)
+    const parsedFileUrl = new URL(fileUrl)
+    const response = await fetch(fileUrl, {
+      headers: {
+        ...headers,
+        'Alt-Used': parsedFileUrl.host,
+        'Upgrade-Insecure-Requests': '1',
+      },
+    })
+
     if (!response.ok) {
       throw new DownloadError(await response.text(), response.status)
     }
@@ -214,11 +226,14 @@ export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
     const { mime, hash } = await this.uploadFromUrl(
       attachment.url,
       fileUri.toString(),
+      attachment.headers,
     )
+
     if (attachment.thumbnail) {
       await this.uploadFromUrl(
         attachment.thumbnail.url,
         thumbnailUri.toString(),
+        attachment.thumbnail.headers,
       )
     }
 

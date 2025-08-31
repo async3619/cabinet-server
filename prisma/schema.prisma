@@ -102,9 +102,10 @@ model Watcher {
   name String
   type String
 
-  threads        Thread[]
-  attachments    Attachment[]
-  watcherThreads WatcherThread[]
+  threads         Thread[]
+  attachments     Attachment[]
+  watcherThreads  WatcherThread[]
+  excludedThreads ExcludedThread[]
 }
 
 model WatcherThread {
@@ -119,6 +120,14 @@ model WatcherThread {
   threadId String?
 }
 
+model ExcludedThread {
+  id       Int    @id @default(autoincrement())
+  threadId String
+
+  watcher   Watcher @relation(fields: [watcherId], references: [id])
+  watcherId Int
+}
+
 model Statistic {
   id Int @id @default(autoincrement())
 
@@ -128,4 +137,67 @@ model Statistic {
   totalSize       BigInt
 
   createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id Int @id @default(autoincrement())
+
+  activityType String
+  startTime    DateTime
+  endTime      DateTime?
+  isSuccess    Boolean   @default(false)
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  crawlingResult           CrawlingResult?
+  attachmentDownloadResult AttachmentDownloadResult?
+}
+
+model CrawlingResult {
+  id Int @id @default(autoincrement())
+
+  threadsCreated     Int @default(0)
+  postsCreated       Int @default(0)
+  attachmentsCreated Int @default(0)
+  boardsProcessed    Int @default(0)
+
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+  activityLogId Int         @unique
+
+  watcherResults WatcherResult[]
+}
+
+model WatcherResult {
+  id Int @id @default(autoincrement())
+
+  watcherName      String
+  threadsFound     Int     @default(0)
+  postsFound       Int     @default(0)
+  attachmentsFound Int     @default(0)
+  isSuccessful     Boolean @default(true)
+  errorMessage     String?
+
+  crawlingResult   CrawlingResult @relation(fields: [crawlingResultId], references: [id], onDelete: Cascade)
+  crawlingResultId Int
+}
+
+model AttachmentDownloadResult {
+  id Int @id @default(autoincrement())
+
+  attachmentId         String
+  name                 String
+  width                Int
+  height               Int
+  extension            String
+  fileSize             Int?
+  mimeType             String?
+  downloadDurationMs   Int?
+  fileUri              String?
+  thumbnailGenerated   Boolean @default(false)
+  retryCount           Int     @default(0)
+  httpStatusCode       Int?
+
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+  activityLogId Int         @unique
 }
