@@ -2,12 +2,10 @@ import { Inject } from '@nestjs/common'
 import { Args, Int, Query, Resolver } from '@nestjs/graphql'
 
 import { ActivityLogService } from '@/activity-log/activity-log.service'
-import type {
+import {
   ActivityLog,
   FindManyActivityLogArgs,
   FindUniqueActivityLogArgs,
-} from '@/generated/graphql'
-import {
   ActivityLog as ActivityLogType,
   CrawlingResult as CrawlingResultType,
   WatcherResult as WatcherResultType,
@@ -51,13 +49,6 @@ export class ActivityLogResolver {
         },
       },
     })
-  }
-
-  @Query(() => [ActivityLogType])
-  async recentCrawlingLogs(
-    @Args('limit', { type: () => Int, defaultValue: 10 }) limit: number,
-  ): Promise<ActivityLog[]> {
-    return this.activityLogService.findRecentCrawlingLogs(limit)
   }
 
   @Query(() => Int)
