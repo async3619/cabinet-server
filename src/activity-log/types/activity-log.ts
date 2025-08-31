@@ -6,7 +6,7 @@ export interface CrawlingLogData {
   watcherResults: WatcherResultData[]
 }
 
-export interface WatcherResultData {
+interface WatcherResultData {
   attachmentsFound: number
   errorMessage?: string
   isSuccessful: boolean
@@ -23,29 +23,19 @@ export interface WatcherResult {
   threadsFound: number
 }
 
-export interface ActivityLogCreateData {
-  activityType: string
-  crawlingResult?: CrawlingLogData
-  endTime?: Date
-  errorMessage?: string
-  isSuccess?: boolean
-  startTime: Date
+interface ActivitySuccessData {
+  crawlingResult: CrawlingLogData
+  isSuccess: true
 }
 
-export interface ActivityFinishData {
-  crawlingResult?: CrawlingLogData
-  errorMessage?: string
-  isSuccess: boolean
+interface ActivityFailureData {
+  errorMessage: string
+  isSuccess: false
 }
+
+export type ActivityFinishData = ActivitySuccessData | ActivityFailureData
 
 export interface ActivityStartResult {
   id: number
   startTime: Date
-}
-
-export interface CrawlingStatistics {
-  avgAttachmentsPerRun: number
-  avgPostsPerRun: number
-  avgThreadsPerRun: number
-  totalLogs: number
 }

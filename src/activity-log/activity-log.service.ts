@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common'
 import type {
   ActivityFinishData,
   ActivityStartResult,
+  CrawlingLogData,
 } from '@/activity-log/types/activity-log'
 import { EntityBaseService } from '@/common/entity-base.service'
 import { PrismaService } from '@/prisma/prisma.service'
@@ -36,34 +37,11 @@ export class ActivityLogService extends EntityBaseService<'activityLog'> {
 
   async finishActivity(activityId: number, data: ActivityFinishData) {
     const endTime = new Date()
-    const { crawlingResult, ...updateData } = data
+    const updateData = this.buildActivityUpdateData(data, endTime)
 
     const activityLog = await this.update({
       where: { id: activityId },
-      data: {
-        ...updateData,
-        endTime,
-        crawlingResult: crawlingResult
-          ? {
-              create: {
-                threadsCreated: crawlingResult.threadsCreated,
-                postsCreated: crawlingResult.postsCreated,
-                attachmentsCreated: crawlingResult.attachmentsCreated,
-                boardsProcessed: crawlingResult.boardsProcessed,
-                watcherResults: {
-                  create: crawlingResult.watcherResults.map((result) => ({
-                    watcherName: result.watcherName,
-                    threadsFound: result.threadsFound,
-                    postsFound: result.postsFound,
-                    attachmentsFound: result.attachmentsFound,
-                    isSuccessful: result.isSuccessful,
-                    errorMessage: result.errorMessage,
-                  })),
-                },
-              },
-            }
-          : undefined,
-      },
+      data: updateData,
       include: {
         crawlingResult: {
           include: {
@@ -78,5 +56,46 @@ export class ActivityLogService extends EntityBaseService<'activityLog'> {
     )
 
     return activityLog
+  }
+
+  private buildActivityUpdateData(data: ActivityFinishData, endTime: Date) {
+    const baseData = { endTime }
+
+    if (data.isSuccess) {
+      return {
+        ...baseData,
+        isSuccess: true,
+        errorMessage: undefined,
+        crawlingResult: {
+          create: this.buildCrawlingResultData(data.crawlingResult),
+        },
+      }
+    }
+
+    return {
+      ...baseData,
+      isSuccess: false,
+      errorMessage: data.errorMessage,
+      crawlingResult: undefined,
+    }
+  }
+
+  private buildCrawlingResultData(crawlingResult: CrawlingLogData) {
+    return {
+      threadsCreated: crawlingResult.threadsCreated,
+      postsCreated: crawlingResult.postsCreated,
+      attachmentsCreated: crawlingResult.attachmentsCreated,
+      boardsProcessed: crawlingResult.boardsProcessed,
+      watcherResults: {
+        create: crawlingResult.watcherResults.map((result) => ({
+          watcherName: result.watcherName,
+          threadsFound: result.threadsFound,
+          postsFound: result.postsFound,
+          attachmentsFound: result.attachmentsFound,
+          isSuccessful: result.isSuccessful,
+          errorMessage: result.errorMessage,
+        })),
+      },
+    }
   }
 }
