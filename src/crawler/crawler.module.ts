@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { ActivityLogModule } from '@/activity-log/activity-log.module'
 import { AttachmentModule } from '@/attachment/attachment.module'
 import { BoardModule } from '@/board/board.module'
 import { ConfigModule } from '@/config/config.module'
@@ -16,6 +17,7 @@ import { WatcherModule } from '@/watcher/watcher.module'
     ThreadModule,
     PostModule,
     AttachmentModule,
+    ActivityLogModule,
   ],
   providers: [CrawlerService],
   exports: [CrawlerService],

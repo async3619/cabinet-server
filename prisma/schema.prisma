@@ -138,3 +138,45 @@ model Statistic {
 
   createdAt DateTime @default(now())
 }
+
+model ActivityLog {
+  id Int @id @default(autoincrement())
+
+  activityType String
+  startTime    DateTime
+  endTime      DateTime?
+  isSuccess    Boolean   @default(false)
+  errorMessage String?
+
+  createdAt DateTime @default(now())
+
+  crawlingResult CrawlingResult?
+}
+
+model CrawlingResult {
+  id Int @id @default(autoincrement())
+
+  threadsCreated     Int @default(0)
+  postsCreated       Int @default(0)
+  attachmentsCreated Int @default(0)
+  boardsProcessed    Int @default(0)
+
+  activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
+  activityLogId Int         @unique
+
+  watcherResults WatcherResult[]
+}
+
+model WatcherResult {
+  id Int @id @default(autoincrement())
+
+  watcherName      String
+  threadsFound     Int     @default(0)
+  postsFound       Int     @default(0)
+  attachmentsFound Int     @default(0)
+  isSuccessful     Boolean @default(true)
+  errorMessage     String?
+
+  crawlingResult   CrawlingResult @relation(fields: [crawlingResultId], references: [id], onDelete: Cascade)
+  crawlingResultId Int
+}

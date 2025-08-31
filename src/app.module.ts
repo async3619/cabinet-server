@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule'
 
 import * as path from 'node:path'
 
+import { ActivityLogModule } from '@/activity-log/activity-log.module'
 import { AttachmentModule } from '@/attachment/attachment.module'
 import { BoardModule } from '@/board/board.module'
 import { ConfigModule } from '@/config/config.module'
@@ -43,6 +44,7 @@ import { WatcherModule } from '@/watcher/watcher.module'
     AttachmentModule,
     WatcherModule,
     StatisticModule,
+    ActivityLogModule,
   ],
 })
 export class AppModule {}
