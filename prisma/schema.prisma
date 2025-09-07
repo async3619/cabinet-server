@@ -146,6 +146,7 @@ model ActivityLog {
   startTime    DateTime
   endTime      DateTime?
   isSuccess    Boolean   @default(false)
+  isFinished   Boolean   @default(false)
   errorMessage String?
 
   createdAt DateTime @default(now())
@@ -185,18 +186,18 @@ model WatcherResult {
 model AttachmentDownloadResult {
   id Int @id @default(autoincrement())
 
-  attachmentId         String
-  name                 String
-  width                Int
-  height               Int
-  extension            String
-  fileSize             Int?
-  mimeType             String?
-  downloadDurationMs   Int?
-  fileUri              String?
-  thumbnailGenerated   Boolean @default(false)
-  retryCount           Int     @default(0)
-  httpStatusCode       Int?
+  attachmentId       String
+  name               String
+  width              Int
+  height             Int
+  extension          String
+  fileSize           Int?
+  mimeType           String?
+  downloadDurationMs Int?
+  fileUri            String?
+  thumbnailGenerated Boolean @default(false)
+  retryCount         Int     @default(0)
+  httpStatusCode     Int?
 
   activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
   activityLogId Int         @unique
