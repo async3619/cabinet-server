@@ -19,7 +19,7 @@ interface AudDResponse {
     songs: Array<{
       album: string
       artist: string
-      label: string
+      label?: string
       release_date: string
       song_link: string
       timecode: string
