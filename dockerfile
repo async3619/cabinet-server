@@ -2,7 +2,7 @@ FROM node:22-alpine AS deps
 WORKDIR /app
 
 # Install openssl, python, g++, and make for native modules
-RUN apk update && apk add nodejs npm openssl python3 g++ make py3-setuptools && rm -rf /var/cache/apk/*
+RUN apk update && apk add nodejs npm openssl python3 g++ make py3-setuptools ffmpeg && rm -rf /var/cache/apk/*
 
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* prisma cabinet.config.schema.json ./
 
@@ -38,6 +38,8 @@ RUN \
 
 FROM node:22-alpine AS runner
 WORKDIR /app
+
+RUN apk update && apk add openssl ffmpeg && rm -rf /var/cache/apk/*
 
 COPY --from=builder --chown=node:node /app/package.json ./
 COPY --from=builder --chown=node:node /app/cabinet.config.schema.json ./
