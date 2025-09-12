@@ -34,6 +34,8 @@ export class ThreadService extends EntityBaseService<'thread'> {
       )
 
       const id = getThreadUniqueId(thread)
+      const posts = threadPostMap[id] ?? []
+
       const input: Omit<Prisma.ThreadCreateInput, 'id'> = {
         no: thread.no,
         author: thread.author,
@@ -42,8 +44,8 @@ export class ThreadService extends EntityBaseService<'thread'> {
         createdAt: dayjs.unix(thread.createdAt).toDate(),
         bumpedAt: dayjs.unix(thread.createdAt).toDate(),
         isArchived: false,
-        postCount: (threadPostMap[id] ?? []).length,
-        attachmentCount: thread.attachments.length,
+        postCount: posts.length,
+        attachmentCount: posts.flatMap((p) => p.attachments).length,
         board: {
           connect: { id: getBoardUniqueId(thread.board) },
         },
