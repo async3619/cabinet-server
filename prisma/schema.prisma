@@ -47,6 +47,9 @@ model Thread {
   bumpedAt   DateTime?
   isArchived Boolean   @default(false)
 
+  attachmentCount Int?
+  postCount       Int?
+
   watchers       Watcher[]
   attachments    Attachment[]
   posts          Post[]
