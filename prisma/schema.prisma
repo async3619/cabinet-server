@@ -12,6 +12,7 @@ generator nestgraphql {
   provider   = "node node_modules/prisma-nestjs-graphql"
   output     = "../src/generated/graphql"
   emitSingle = true
+  noTypeId   = true
 
   graphqlScalars_BigInt_name      = "GraphQLBigInt"
   graphqlScalars_BigInt_specifier = "graphql-scalars"
