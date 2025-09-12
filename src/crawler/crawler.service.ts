@@ -266,11 +266,23 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
             }
           }
 
+          const threadPostMap: Record<string, RawPost<string>[]> = {}
+          for (const post of Object.values(posts)) {
+            if (!post.thread) {
+              continue
+            }
+
+            const threadId = getThreadUniqueId(post.thread)
+            threadPostMap[threadId] ??= []
+            threadPostMap[threadId].push(post)
+          }
+
           await this.boardService.upsertMany(Object.values(boards))
           await this.threadService.upsertMany(
             Object.values(threads),
             threadWatcherMap,
             attachmentWatcherMap,
+            threadPostMap,
           )
           await this.postService.upsertMany(
             Object.values(posts),

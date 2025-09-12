@@ -6,6 +6,7 @@ import { AttachmentService } from '@/attachment/attachment.service'
 import { EntityBaseService } from '@/common/entity-base.service'
 import { getAttachmentUniqueId } from '@/crawler/types/attachment'
 import { getBoardUniqueId } from '@/crawler/types/board'
+import { RawPost } from '@/crawler/types/post'
 import { getThreadUniqueId, RawThread } from '@/crawler/types/thread'
 import { PrismaService } from '@/prisma/prisma.service'
 import { Watcher } from '@/watcher/types/watcher'
@@ -24,6 +25,7 @@ export class ThreadService extends EntityBaseService<'thread'> {
     threads: RawThread<string>[],
     watcherMap: Record<string, Watcher[]>,
     attachmentWatcherMap: Record<string, Watcher[]>,
+    threadPostMap: Record<string, RawPost<string>[]>,
   ) {
     for (const thread of threads) {
       await this.attachmentService.saveMany(
@@ -40,6 +42,8 @@ export class ThreadService extends EntityBaseService<'thread'> {
         createdAt: dayjs.unix(thread.createdAt).toDate(),
         bumpedAt: dayjs.unix(thread.createdAt).toDate(),
         isArchived: false,
+        postCount: (threadPostMap[id] ?? []).length,
+        attachmentCount: thread.attachments.length,
         board: {
           connect: { id: getBoardUniqueId(thread.board) },
         },
