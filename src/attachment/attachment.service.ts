@@ -123,23 +123,6 @@ export class AttachmentService
     }
   }
 
-  async countByThread(thread: Thread) {
-    const postIds = await this.postService
-      .find({
-        select: { id: true },
-        where: { threadId: thread.id },
-      })
-      .then((posts) => posts.map(({ id }) => id))
-
-    return this.prisma.attachment.count({
-      where: {
-        posts: {
-          every: { id: { in: postIds } },
-        },
-      },
-    })
-  }
-
   cleanUpMany(attachments: MinimalAttachment[]) {
     this.attachmentQueue.addBulk(
       attachments.map((item) => ({
