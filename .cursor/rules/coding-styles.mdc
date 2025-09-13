@@ -1,0 +1,49 @@
+---
+alwaysApply: true
+---
+
+## 기본 코딩 스타일
+
+- 코드를 작성할 때 주석을 작성하지 말 것
+- 가능한 한 type casting을 사용하지 말 것
+- 함수 리턴 타입은 가능한 한 명시하지 말 것
+- 최대한 파라미터나 변수 선언에 Object 타입에 대해서 인라인 타입을 사용하지 말고 기존에 정의된 타입을 재사용할 것. 만약 재사용할 타입이 없다면, 새로운 타입을 정의할 것
+- 모든 파일명은 가능한 한 kebab-case를 사용할 것
+
+## Import 구조
+
+- 외부 라이브러리 imports 먼저
+- 빈 줄
+- Node.js 내장 모듈 (node: prefix 사용)
+- 빈 줄
+- 내부 모듈 (@/ 경로별로 그룹화)
+- type import는 `import type` 키워드로 명시적 사용
+
+## NestJS 패턴
+
+- Service는 DB 접근이 필요한 경우에만 EntityBaseService 상속 사용
+- Resolver는 @Query, @Mutation, @ResolveField 구조 일관성 유지
+- Module은 imports/providers/exports만 간단히 구성
+- 생성자에서 @Inject() 명시적 사용
+- 모든 Resolver, Service, Controller, Module은 한 파일에 하나 씩만 정의하도록 한다.
+
+## 타입 정의
+
+- interface와 type을 적절히 분리
+- Generic을 적극 활용
+- 타입 정보는 별도 파일로 분리하여 재사용
+- Raw- prefix나 명확한 도메인 이름 사용
+
+## 네이밍 컨벤션
+
+- camelCase 일관 사용
+- 유틸리티 함수는 동사형 명명
+- unique ID 생성: get[Entity]UniqueId 패턴
+- 파일명: kebab-case
+
+## 구조 패턴
+
+- 도메인별로 service, resolver, module 분리
+- types는 별도 디렉토리
+- 공통 로직은 common/ 디렉토리
+- 유틸리티는 utils/ 디렉토리
