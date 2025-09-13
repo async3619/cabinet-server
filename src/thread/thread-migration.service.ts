@@ -20,6 +20,48 @@ export class ThreadMigrationService
 
   async onModuleInit() {
     await this.migrateBumpedAtColumn()
+    await this.migrateAttachmentPostCountColumn()
+  }
+
+  private async migrateAttachmentPostCountColumn() {
+    const threads = await this.prisma.thread.findMany({
+      where: {
+        OR: [{ attachmentCount: null }, { postCount: null }],
+      },
+      include: {
+        posts: true,
+      },
+    })
+
+    this.logger.log(
+      `Migrating ${threads.length} threads for 'attachmentCount' and 'postCount' columns...`,
+    )
+
+    const [elapsedTime] = await stopwatch(async () => {
+      for (const thread of threads) {
+        const postCount = thread.posts.length
+        const postIds = thread.posts.map((p) => p.id)
+
+        const attachments = await this.prisma.post
+          .findMany({
+            where: { id: { in: postIds } },
+            include: { attachments: true },
+          })
+          .then((posts) => posts.flatMap((p) => p.attachments))
+
+        await this.prisma.thread.update({
+          where: { id: thread.id },
+          data: {
+            attachmentCount: attachments.length,
+            postCount,
+          },
+        })
+      }
+    })
+
+    this.logger.log(
+      `Migrated ${threads.length} threads for 'attachmentCount' and 'postCount' columns. (${prettyMilliseconds(elapsedTime, { verbose: true })})`,
+    )
   }
 
   /**

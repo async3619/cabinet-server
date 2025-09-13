@@ -11,6 +11,7 @@ import { AttachmentModule } from '@/attachment/attachment.module'
 import { BoardModule } from '@/board/board.module'
 import { ConfigModule } from '@/config/config.module'
 import { CrawlerModule } from '@/crawler/crawler.module'
+import { MusicSourceModule } from '@/music-source/music-source.module'
 import { PostModule } from '@/post/post.module'
 import { PrismaModule } from '@/prisma/prisma.module'
 import { StatisticModule } from '@/statistic/statistic.module'
@@ -45,6 +46,7 @@ import { WatcherModule } from '@/watcher/watcher.module'
     WatcherModule,
     StatisticModule,
     ActivityLogModule,
+    MusicSourceModule,
   ],
 })
 export class AppModule {}

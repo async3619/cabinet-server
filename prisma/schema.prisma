@@ -12,6 +12,7 @@ generator nestgraphql {
   provider   = "node node_modules/prisma-nestjs-graphql"
   output     = "../src/generated/graphql"
   emitSingle = true
+  noTypeId   = true
 
   graphqlScalars_BigInt_name      = "GraphQLBigInt"
   graphqlScalars_BigInt_specifier = "graphql-scalars"
@@ -45,6 +46,9 @@ model Thread {
   createdAt  DateTime
   bumpedAt   DateTime?
   isArchived Boolean   @default(false)
+
+  attachmentCount Int?
+  postCount       Int?
 
   watchers       Watcher[]
   attachments    Attachment[]
@@ -92,9 +96,25 @@ model Attachment {
   thumbnailHeight  Int?
   thumbnailFileUri String?
 
-  threads  Thread[]
-  posts    Post[]
-  watchers Watcher[]
+  threads     Thread[]
+  posts       Post[]
+  watchers    Watcher[]
+  musicSource MusicSource[]
+}
+
+model MusicSource {
+  id Int @id @default(autoincrement())
+
+  title       String
+  artist      String
+  album       String
+  releaseDate String
+  label       String?
+  timeCode    String
+  offset      String
+
+  attachment   Attachment? @relation(fields: [attachmentId], references: [id])
+  attachmentId String?
 }
 
 model Watcher {
@@ -146,6 +166,7 @@ model ActivityLog {
   startTime    DateTime
   endTime      DateTime?
   isSuccess    Boolean   @default(false)
+  isFinished   Boolean   @default(false)
   errorMessage String?
 
   createdAt DateTime @default(now())
@@ -185,18 +206,18 @@ model WatcherResult {
 model AttachmentDownloadResult {
   id Int @id @default(autoincrement())
 
-  attachmentId         String
-  name                 String
-  width                Int
-  height               Int
-  extension            String
-  fileSize             Int?
-  mimeType             String?
-  downloadDurationMs   Int?
-  fileUri              String?
-  thumbnailGenerated   Boolean @default(false)
-  retryCount           Int     @default(0)
-  httpStatusCode       Int?
+  attachmentId       String
+  name               String
+  width              Int
+  height             Int
+  extension          String
+  fileSize           Int?
+  mimeType           String?
+  downloadDurationMs Int?
+  fileUri            String?
+  thumbnailGenerated Boolean @default(false)
+  retryCount         Int     @default(0)
+  httpStatusCode     Int?
 
   activityLog   ActivityLog @relation(fields: [activityLogId], references: [id], onDelete: Cascade)
   activityLogId Int         @unique
