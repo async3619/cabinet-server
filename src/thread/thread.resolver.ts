@@ -79,11 +79,6 @@ export class ThreadResolver {
       .board()
   }
 
-  @ResolveField(() => Int)
-  async attachmentCount(@Root() thread: Thread) {
-    return this.attachmentService.countByThread(thread)
-  }
-
   @ResolveField(() => ThreadCount)
   async _count(@Root() thread: Thread): Promise<ThreadCount> {
     const result = await this.threadService.findOne({
