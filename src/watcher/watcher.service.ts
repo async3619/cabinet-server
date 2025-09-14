@@ -252,7 +252,7 @@ export class WatcherService
     })
   }
 
-  async excludeThread(threadId: string, watcherId: number) {
+  async excludeThread(threadId: string, watcherId: number, wait?: boolean) {
     const watcher = await this.prisma.watcher.findUnique({
       where: { id: watcherId },
     })
@@ -265,7 +265,12 @@ export class WatcherService
       data: { threadId, watcher: { connect: { id: watcherId } } },
     })
 
-    this.crawlerService.cleanUpObsoleteEntities().then()
+    const promise = this.crawlerService.cleanUpObsoleteEntities()
+    if (wait) {
+      await promise
+    } else {
+      promise.then()
+    }
 
     return true
   }
