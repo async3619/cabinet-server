@@ -54,8 +54,9 @@ export class WatcherResolver {
   async excludeThreadFromWatcher(
     @Args('threadId', { type: () => String }) threadId: string,
     @Args('watcherId', { type: () => Int }) watcherId: number,
+    @Args('wait', { type: () => Boolean, nullable: true }) wait?: boolean,
   ) {
-    return this.watcherService.excludeThread(threadId, watcherId)
+    return this.watcherService.excludeThread(threadId, watcherId, wait)
   }
 
   @ResolveField(() => [Thread])
