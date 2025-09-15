@@ -28,6 +28,10 @@ import { WatcherModule } from '@/watcher/watcher.module'
         process.env.NODE_ENV !== 'production'
           ? path.join(process.cwd(), '..', 'cabinet-client', 'schema.gql')
           : true,
+      installSubscriptionHandlers: true,
+      subscriptions: {
+        'graphql-ws': true,
+      },
     }),
     BullModule.forRoot({
       connection: {

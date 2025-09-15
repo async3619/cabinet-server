@@ -16,6 +16,10 @@ import { ActivityLogService } from '@/activity-log/activity-log.service'
 import type { WatcherResult } from '@/activity-log/types/activity-log'
 import { AttachmentService } from '@/attachment/attachment.service'
 import { BoardService } from '@/board/board.service'
+import {
+  SubscribableService,
+  SubscriptionDataMap,
+} from '@/common/subscribable.service'
 import { ConfigService } from '@/config/config.service'
 import { CRAWLER_CONSTRUCTOR_MAP, CrawlerMap } from '@/crawler/crawlers'
 import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
@@ -34,13 +38,22 @@ import { WatcherService } from '@/watcher/watcher.service'
 
 const CRAWLER_TASK_NAME = 'crawler'
 
+interface CrawlerSubscriptionDataMap extends SubscriptionDataMap {
+  crawlingStatusChanged: boolean
+}
+
 @Injectable()
-export class CrawlerService implements OnModuleInit, OnModuleDestroy {
+export class CrawlerService
+  extends SubscribableService<CrawlerSubscriptionDataMap>
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(CrawlerService.name)
   private readonly crawlers: BaseCrawler<string, any>[] = []
 
   private initializingPromise: Promise<void> | null = null
   private crawlingPromise: Promise<void> | null = null
+
+  private crawling = false
 
   constructor(
     @Inject(ConfigService) private readonly configService: ConfigService,
@@ -54,7 +67,13 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     private readonly activityLogService: ActivityLogService,
     @Inject(SchedulerRegistry)
     private readonly schedulerRegistry: SchedulerRegistry,
-  ) {}
+  ) {
+    super()
+  }
+
+  get isCrawling() {
+    return this.crawling
+  }
 
   async onModuleInit() {
     this.initializingPromise = (async () => {
@@ -137,7 +156,17 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async doCrawl(): Promise<void> {
+    if (this.crawlingPromise) {
+      this.logger.warn(
+        'A crawling task is already running, skipping this request.',
+      )
+
+      return this.crawlingPromise
+    }
+
     this.crawlingPromise = (async () => {
+      this.setCrawlingState(true)
+
       const { id: activityId } =
         await this.activityLogService.startActivity('crawling')
 
@@ -352,7 +381,10 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
 
         throw error
       }
-    })()
+    })().finally(() => {
+      this.setCrawlingState(false)
+      this.crawlingPromise = null
+    })
   }
 
   async cleanUpObsoleteEntities() {
@@ -503,5 +535,10 @@ export class CrawlerService implements OnModuleInit, OnModuleDestroy {
     })()
 
     this.logger.log(`Crawlers and schedulers reinitialized successfully`)
+  }
+
+  private setCrawlingState(isCrawling: boolean) {
+    this.crawling = isCrawling
+    this.publish('crawlingStatusChanged', isCrawling)
   }
 }

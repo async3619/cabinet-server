@@ -44,6 +44,8 @@
     "fs-extra": "^11.3.0",
     "graphql": "^16.11.0",
     "graphql-scalars": "^1.24.2",
+    "graphql-subscriptions": "^3.0.0",
+    "graphql-ws": "^6.0.6",
     "html-entities": "^2.6.0",
     "husky": "^9.1.6",
     "lodash": "^4.17.21",
