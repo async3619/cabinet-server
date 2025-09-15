@@ -4,6 +4,7 @@ import { ActivityLogModule } from '@/activity-log/activity-log.module'
 import { AttachmentModule } from '@/attachment/attachment.module'
 import { BoardModule } from '@/board/board.module'
 import { ConfigModule } from '@/config/config.module'
+import { CrawlerResolver } from '@/crawler/crawler.resolver'
 import { CrawlerService } from '@/crawler/crawler.service'
 import { PostModule } from '@/post/post.module'
 import { ThreadModule } from '@/thread/thread.module'
@@ -19,7 +20,7 @@ import { WatcherModule } from '@/watcher/watcher.module'
     AttachmentModule,
     ActivityLogModule,
   ],
-  providers: [CrawlerService],
+  providers: [CrawlerService, CrawlerResolver],
   exports: [CrawlerService],
 })
 export class CrawlerModule {}
