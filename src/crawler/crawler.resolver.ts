@@ -1,5 +1,5 @@
 import { Inject } from '@nestjs/common'
-import { Query, Resolver, Subscription } from '@nestjs/graphql'
+import { Mutation, Query, Resolver, Subscription } from '@nestjs/graphql'
 
 import { CrawlerService } from '@/crawler/crawler.service'
 
@@ -12,6 +12,12 @@ export class CrawlerResolver {
   @Query(() => Boolean)
   async isCrawlerRunning(): Promise<boolean> {
     return this.crawlerService.isCrawling
+  }
+
+  @Mutation(() => Boolean)
+  async startCrawler() {
+    this.crawlerService.doCrawl()
+    return true
   }
 
   @Subscription(() => Boolean)
