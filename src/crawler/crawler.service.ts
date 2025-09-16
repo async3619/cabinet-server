@@ -21,7 +21,7 @@ import {
   SubscriptionDataMap,
 } from '@/common/subscribable.service'
 import { ConfigService } from '@/config/config.service'
-import { CRAWLER_CONSTRUCTOR_MAP, CrawlerMap } from '@/crawler/crawlers'
+import { CRAWLER_CONSTRUCTOR_MAP } from '@/crawler/crawlers'
 import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
 import {
   getAttachmentUniqueId,
@@ -95,36 +95,24 @@ export class CrawlerService
   private async createCrawlers(): Promise<void> {
     this.crawlers.length = 0
 
-    const watcherTypes = Object.keys(
-      this.configService.config.watchers,
-    ) as Array<keyof CrawlerMap>
+    const { watchers } = this.configService.config
+    for (const config of watchers) {
+      const watcher = await this.watcherService.findByName(config.name)
 
-    for (const type of watcherTypes) {
-      const crawlerConfigs = this.configService.config.watchers[type]
-      if (!crawlerConfigs) {
-        continue
+      switch (config.type) {
+        case 'four-chan':
+          this.crawlers.push(
+            new CRAWLER_CONSTRUCTOR_MAP[config.type](config, watcher),
+          )
+          break
+
+        default:
+          throw new Error(`Unknown watcher configuration type '${config.type}'`)
       }
 
-      for (const config of crawlerConfigs) {
-        const watcher = await this.watcherService.findByName(config.name)
-
-        switch (config.type) {
-          case 'four-chan':
-            this.crawlers.push(
-              new CRAWLER_CONSTRUCTOR_MAP[config.type](config, watcher),
-            )
-            break
-
-          default:
-            throw new Error(
-              `Unknown watcher configuration type '${config.type}'`,
-            )
-        }
-
-        this.logger.log(
-          `Successfully created '${config.name}' (${config.type}) crawler`,
-        )
-      }
+      this.logger.log(
+        `Successfully created '${config.name}' (${config.type}) crawler`,
+      )
     }
   }
 

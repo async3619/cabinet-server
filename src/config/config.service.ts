@@ -33,9 +33,7 @@ export type ConfigData = {
     interval: number | string
   }
   storage: StorageOptionsMap[keyof StorageOptionsMap]
-  watchers: {
-    [TKey in keyof CrawlerMap]?: CrawlerMap[TKey]['config'][]
-  }
+  watchers: CrawlerMap[keyof CrawlerMap]['config'][]
 }
 
 const CONFIG_FILE_PATH = path.join(process.cwd(), 'cabinet.config.json')
