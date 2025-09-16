@@ -71,21 +71,11 @@ export class WatcherService
   }
 
   private async initializeWatchers() {
-    const watcherMap = _.chain(this.configService.config.watchers)
-      .values()
-      .flatten()
-      .compact()
-      .keyBy('name')
-      .value()
-
     const watcherNameCounts = _.chain(this.configService.config.watchers)
-      .values()
-      .flatten()
       .countBy((w) => w.name)
       .toPairs()
       .value()
 
-    const watchers = Object.values(watcherMap)
     for (const [name, count] of watcherNameCounts) {
       if (count <= 1) {
         continue
@@ -106,6 +96,7 @@ export class WatcherService
       },
     })
 
+    const { watchers } = this.configService.config
     for (const watcher of watchers) {
       const watcherEntity = await this.prisma.watcher.findFirst({
         where: { name: watcher.name },
