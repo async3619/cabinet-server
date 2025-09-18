@@ -2,27 +2,12 @@ import type { Readable } from 'stream'
 
 import type { RawAttachment } from '@/crawler/types/attachment'
 
-export interface StorageSaveResult {
-  fileUri: string
-  hash: string
-  mime: string
-  thumbnailUri?: string
-}
-
-export interface StorageDeleteOptions {
-  fileUri?: string | null
-  thumbnailUri?: string | null
-}
-
-export interface BaseStorageOptions<TName extends string> {
-  type: TName
-}
-
-export interface GetStreamOfOptions {
-  end?: number
-  highWaterMark?: number
-  start?: number
-}
+import type {
+  BaseStorageOptions,
+  GetStreamOfOptions,
+  StorageDeleteOptions,
+  StorageSaveResult,
+} from './schema'
 
 export abstract class BaseStorage<
   TName extends string,

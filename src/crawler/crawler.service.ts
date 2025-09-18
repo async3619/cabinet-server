@@ -22,7 +22,7 @@ import {
 } from '@/common/subscribable.service'
 import { ConfigService } from '@/config/config.service'
 import { CRAWLER_CONSTRUCTOR_MAP } from '@/crawler/crawlers'
-import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
+import { BaseCrawler } from '@/crawler/crawlers/base'
 import {
   getAttachmentUniqueId,
   RawAttachment,
