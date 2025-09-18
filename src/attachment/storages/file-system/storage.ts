@@ -3,27 +3,19 @@ import * as fs from 'fs-extra'
 import * as path from 'node:path'
 import type { Readable } from 'stream'
 
+import { BaseStorage } from '@/attachment/storages/base'
 import type {
-  BaseStorageOptions,
   GetStreamOfOptions,
   StorageDeleteOptions,
   StorageSaveResult,
-} from '@/attachment/storages/base.storage'
-import { BaseStorage } from '@/attachment/storages/base.storage'
+} from '@/attachment/storages/base'
 import type { RawAttachment } from '@/crawler/types/attachment'
 import { downloadFile } from '@/utils/downloadFile'
 import { md5 } from '@/utils/hash'
 import { mimeType } from '@/utils/mimetype'
 import { normalizePath } from '@/utils/normalizePath'
 
-/**
- * @public
- */
-export interface FileSystemStorageOptions
-  extends BaseStorageOptions<'filesystem'> {
-  filePath: string
-  thumbnailPath: string
-}
+import type { FileSystemStorageOptions } from './schema'
 
 export class FileSystemStorage extends BaseStorage<
   'filesystem',

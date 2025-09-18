@@ -7,6 +7,7 @@
     "ts-loader",
     "prisma-nestjs-graphql",
     "@semantic-release/*",
-    "conventional-changelog-conventionalcommits"
+    "conventional-changelog-conventionalcommits",
+    "graphql-ws"
   ]
 }

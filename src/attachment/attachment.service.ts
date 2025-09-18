@@ -14,17 +14,13 @@ import { decode as decodeHtmlEntities } from 'html-entities'
 
 import { AttachmentJobData } from '@/attachment/attachment.processor'
 import { createStorageInstance } from '@/attachment/storages'
-import {
-  BaseStorage,
-  BaseStorageOptions,
-} from '@/attachment/storages/base.storage'
+import { BaseStorage, BaseStorageOptions } from '@/attachment/storages/base'
 import { EntityBaseService } from '@/common/entity-base.service'
 import { ConfigService } from '@/config/config.service'
 import {
   getAttachmentUniqueId,
   RawAttachment,
 } from '@/crawler/types/attachment'
-import { Thread } from '@/generated/graphql'
 import { PostService } from '@/post/post.service'
 import { PrismaService } from '@/prisma/prisma.service'
 import { Watcher } from '@/watcher/types/watcher'
@@ -99,9 +95,11 @@ export class AttachmentService
       },
     }
 
+    const { createdAt, ...updateInput } = input
+
     await this.prisma.attachment.upsert({
       where: { id },
-      update: { ...input },
+      update: updateInput,
       create: { id, ...input },
     })
 

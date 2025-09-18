@@ -4,7 +4,7 @@ import type { RawThread } from '@/crawler/types/thread'
 import type { WatcherThread } from '@/crawler/types/watcher-thread'
 import type { Watcher } from '@/watcher/types/watcher'
 
-export interface BaseCrawlerOptions<TName extends string> {
+interface BaseCrawlerOptions<TName extends string> {
   name: string
   type: TName
 }

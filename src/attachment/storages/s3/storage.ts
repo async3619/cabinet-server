@@ -17,34 +17,19 @@ import { Upload } from '@aws-sdk/lib-storage'
 
 import { Readable } from 'stream'
 
+import { BaseStorage } from '@/attachment/storages/base'
 import type {
-  BaseStorageOptions,
   GetStreamOfOptions,
   StorageDeleteOptions,
   StorageSaveResult,
-} from '@/attachment/storages/base.storage'
-import { BaseStorage } from '@/attachment/storages/base.storage'
+} from '@/attachment/storages/base'
 import type { RawAttachment } from '@/crawler/types/attachment'
 import { DownloadError } from '@/utils/downloadFile'
 import { NotFoundError } from '@/utils/errors/not-found'
 import { md5 } from '@/utils/hash'
 import { mimeType } from '@/utils/mimetype'
 
-/**
- * @public
- */
-export interface S3StorageOptions extends BaseStorageOptions<'s3'> {
-  bypassExistsCheck?: boolean
-  credentials?: {
-    accessKeyId: string
-    secretAccessKey: string
-  }
-  endpoint?: string
-  ensureBucketExists?: boolean
-  fileBucketUri: string
-  region?: string
-  thumbnailBucketUri: string
-}
+import type { S3StorageOptions } from './schema'
 
 export class S3Storage extends BaseStorage<'s3', S3StorageOptions> {
   private readonly client: S3Client
