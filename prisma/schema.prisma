@@ -108,7 +108,7 @@ model MusicSource {
   title       String
   artist      String
   album       String
-  releaseDate String
+  releaseDate String?
   label       String?
   timeCode    String
   offset      String
