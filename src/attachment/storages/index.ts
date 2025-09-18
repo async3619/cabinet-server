@@ -1,5 +1,10 @@
-import { FileSystemStorage } from '@/attachment/storages/file-system.storage'
-import { S3Storage } from '@/attachment/storages/s3.storage'
+import { z } from 'zod'
+
+import {
+  FileSystemStorage,
+  fileSystemStorageOptionsSchema,
+} from './file-system'
+import { S3Storage, s3StorageOptionsSchema } from './s3'
 
 type StorageTypes = FileSystemStorage | S3Storage
 
@@ -7,7 +12,12 @@ type StorageMap = {
   [TName in StorageTypes['name']]: Extract<StorageTypes, { name: TName }>
 }
 
-export type StorageOptionsMap = {
+export const storageOptionsSchema = z.discriminatedUnion('type', [
+  fileSystemStorageOptionsSchema,
+  s3StorageOptionsSchema,
+])
+
+type StorageOptionsMap = {
   [TName in StorageTypes['name']]: StorageMap[TName]['options']
 }
 
@@ -25,3 +35,7 @@ export function createStorageInstance<T extends StorageTypes['name']>(
       throw new Error(`Unsupported storage type: ${(options as any).type}`)
   }
 }
+
+export * from './base'
+export * from './file-system'
+export * from './s3'

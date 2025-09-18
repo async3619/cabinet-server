@@ -4,37 +4,40 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common'
-import Ajv from 'ajv'
-import betterAjvErrors from 'better-ajv-errors'
+import { formatJsonError } from 'better-zod-errors'
 import * as chokidar from 'chokidar'
 import * as fs from 'fs-extra'
-import * as JsonSchemaGenerator from 'ts-json-schema-generator'
+import { z } from 'zod'
 
 import * as path from 'node:path'
 import * as process from 'node:process'
 
-import { StorageOptionsMap } from '@/attachment/storages'
-import { CrawlerMap } from '@/crawler/crawlers'
+import { storageOptionsSchema } from '@/attachment/storages'
+import { crawlerOptionsSchema } from '@/crawler/crawlers'
 import { EventEmitter, EventMap } from '@/utils/event-emitter'
+
+const configDataSchema = z
+  .object({
+    attachment: z.object({
+      downloadThrottle: z.object({
+        download: z.number(),
+        failover: z.number(),
+      }),
+      hashCheck: z.boolean().optional(),
+    }),
+    crawling: z.object({
+      deleteObsolete: z.boolean().optional(),
+      interval: z.union([z.number(), z.string()]),
+    }),
+    storage: storageOptionsSchema,
+    watchers: z.array(crawlerOptionsSchema),
+  })
+  .describe("The application's main configuration schema.")
 
 /**
  * @public
  */
-export type ConfigData = {
-  attachment: {
-    downloadThrottle: {
-      download: number
-      failover: number
-    }
-    hashCheck?: boolean
-  }
-  crawling: {
-    deleteObsolete?: boolean
-    interval: number | string
-  }
-  storage: StorageOptionsMap[keyof StorageOptionsMap]
-  watchers: CrawlerMap[keyof CrawlerMap]['config'][]
-}
+export type ConfigData = z.infer<typeof configDataSchema>
 
 const CONFIG_FILE_PATH = path.join(process.cwd(), 'cabinet.config.json')
 const CONFIG_SCHEMA_FILE_PATH = path.join(
@@ -52,7 +55,6 @@ export class ConfigService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(ConfigService.name)
-  private readonly ajv = new Ajv({ allowUnionTypes: true })
 
   private currentConfig: ConfigData | null = null
   private watcher: chokidar.FSWatcher | null = null
@@ -83,12 +85,7 @@ export class ConfigService
   async onModuleInit() {
     if (process.env.NODE_ENV !== 'production') {
       try {
-        const jsonSchema = JsonSchemaGenerator.createGenerator({
-          path: path.join(process.cwd(), 'src', 'config', 'config.service.ts'),
-          tsconfig: path.join(process.cwd(), 'tsconfig.json'),
-          type: 'ConfigData',
-        }).createSchema('ConfigData')
-
+        const jsonSchema = z.toJSONSchema(configDataSchema)
         await fs.writeJson(CONFIG_SCHEMA_FILE_PATH, jsonSchema)
 
         this.logger.debug(
@@ -115,26 +112,28 @@ export class ConfigService
   }
 
   private async loadConfig() {
-    if (!fs.existsSync(CONFIG_SCHEMA_FILE_PATH)) {
-      throw new Error('Config data schema file not found')
-    }
-
     if (!fs.existsSync(CONFIG_FILE_PATH)) {
       throw new Error('Config file not found!')
     }
 
-    const schema = await fs.readJson(CONFIG_SCHEMA_FILE_PATH)
     const config = await fs.readJson(CONFIG_FILE_PATH)
 
-    const validate = this.ajv.compile(schema)
-    const valid = validate(config)
+    try {
+      this.currentConfig = configDataSchema.parse(config)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const formattedErrors = error.issues.map((issue) =>
+          formatJsonError(issue, config, {
+            useColor: true,
+            syntaxHighlighting: true,
+          }),
+        )
 
-    if (!valid && validate.errors) {
-      const output = betterAjvErrors(schema, config, validate.errors)
-      throw new Error(output)
+        throw new Error(formattedErrors[0])
+      } else {
+        throw error
+      }
     }
-
-    this.currentConfig = config
   }
 
   private async handleConfigChange() {

@@ -1,11 +1,13 @@
 import { Logger } from '@nestjs/common'
 import * as _ from 'lodash'
 
+import type { CrawlerResult } from '@/crawler/crawlers/base'
+import { BaseCrawler } from '@/crawler/crawlers/base'
 import type {
-  BaseCrawlerOptions,
-  CrawlerResult,
-} from '@/crawler/crawlers/base.crawler'
-import { BaseCrawler } from '@/crawler/crawlers/base.crawler'
+  BaseQueryItem,
+  FourChanCrawlerOptions,
+  QueryItem,
+} from '@/crawler/crawlers/four-chan/schema'
 import { FourChanProvider } from '@/crawler/providers/four-chan.provider'
 import type { RawPost } from '@/crawler/types/post'
 import type { RawThread } from '@/crawler/types/thread'
@@ -13,27 +15,6 @@ import { getThreadUniqueId } from '@/crawler/types/thread'
 import type { WatcherThread } from '@/crawler/types/watcher-thread'
 import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
-
-interface BaseQueryItem {
-  exclude?: boolean
-  query: string
-}
-
-// 설정용 타입 정의 (type 필수)
-interface TextQueryItem extends BaseQueryItem {
-  caseInsensitive?: boolean
-  type: 'text'
-}
-
-interface RegexQueryItem extends BaseQueryItem {
-  dotAll?: boolean
-  ignoreCase?: boolean
-  multiline?: boolean
-  type: 'regex'
-  unicode?: boolean
-}
-
-type QueryItem = TextQueryItem | RegexQueryItem
 
 interface CompiledTextQueryItem extends BaseQueryItem {
   caseInsensitive?: boolean
@@ -53,23 +34,6 @@ interface CompiledRegexQueryItem extends BaseQueryItem {
 }
 
 type CompiledQueryItem = CompiledTextQueryItem | CompiledRegexQueryItem
-
-interface FourChanCrawlerEntry {
-  boards: string[]
-  queries: QueryItem[]
-  searchArchive?: boolean
-  target: 'title' | 'content' | 'both'
-}
-
-export interface FourChanCrawlerOptions
-  extends BaseCrawlerOptions<'four-chan'> {
-  cloudflare?: {
-    bm?: string
-    clearance: string
-  }
-  endpoint: string
-  entries: FourChanCrawlerEntry[]
-}
 
 const ENDPOINT_PATHNAME_REGEX_MAP = {
   'a.4cdn.org': /^\/([a-z0-9]*?)\/thread\/(\d+)$/,
