@@ -95,9 +95,11 @@ export class AttachmentService
       },
     }
 
+    const { createdAt, ...updateInput } = input
+
     await this.prisma.attachment.upsert({
       where: { id },
-      update: { ...input },
+      update: updateInput,
       create: { id, ...input },
     })
 
