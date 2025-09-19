@@ -67,7 +67,9 @@
         }
       }
     ],
-    "@semantic-release/npm",
+    ["@semantic-release/exec", { "verifyConditionsCmd": "pnpm package" }],
+    ["@semantic-release/npm", { "pkgRoot": ".", "npmPublish": false }],
+    ["@semantic-release/npm", { "pkgRoot": "./lib" }],
     "@semantic-release/github",
     [
       "@semantic-release/git",

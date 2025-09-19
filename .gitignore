@@ -62,3 +62,5 @@ cabinet.config.json
 /attachments
 /thumbnails
 /src/generated
+/lib
+*.tsbuildinfo

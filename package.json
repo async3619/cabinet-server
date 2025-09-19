@@ -1,10 +1,16 @@
 {
-  "name": "cabinet-server",
+  "name": "@async3619/cabinet-server",
   "version": "1.4.0",
   "description": "",
-  "author": "",
   "private": true,
-  "license": "UNLICENSED",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "author": "Sophia <me@sophia-dev.io>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/async3619/cabinet-server.git"
+  },
+  "license": "MIT",
   "scripts": {
     "postinstall": "prisma generate",
     "typecheck": "tsc --noEmit",
@@ -15,7 +21,8 @@
     "start": "prisma migrate deploy && node dist/main",
     "lint": "eslint \"{src,apps,libs,test,scripts}/**/*.ts\" --fix",
     "prepare": "husky",
-    "knip": "knip"
+    "knip": "knip",
+    "package": "tsdown && ts-node ./scripts/package.ts"
   },
   "dependencies": {
     "@apollo/server": "^4.12.0",
@@ -49,6 +56,7 @@
     "husky": "^9.1.6",
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21",
+    "nestjs-zod": "^5.0.1",
     "pluralize": "^8.0.0",
     "pretty-ms": "^9.2.0",
     "prisma": "^6.7.0",
@@ -66,6 +74,7 @@
     "@nestjs/cli": "^11.0.7",
     "@nestjs/schematics": "^11.0.5",
     "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^11.0.2",
     "@semantic-release/npm": "^12.0.1",
@@ -86,12 +95,15 @@
     "eslint-plugin-prettier": "^5.0.0",
     "eslint-plugin-typescript-sort-keys": "^3.3.0",
     "eslint-plugin-unused-imports": "^4.2.0",
+    "fast-glob": "^3.3.3",
     "knip": "^5.37.0",
     "lint-staged": "^15.2.10",
     "prettier": "^3.0.0",
     "semantic-release": "^24.2.3",
     "source-map-support": "^0.5.21",
     "ts-loader": "^9.4.3",
+    "ts-node": "^10.9.2",
+    "tsdown": "^0.15.2",
     "typescript": "^5.1.3"
   },
   "packageManager": "pnpm@8.7.0+sha512.1d61f8c10e8a5a5dbfbddea0f1f5efb7dbd5177223073aec953cf230aa46416884b9427a6421dba78f28ad0f93fbede38ba57083237b350243de6b1e3a8ce71d"

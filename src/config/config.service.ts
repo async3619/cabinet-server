@@ -8,37 +8,14 @@ import { formatJsonError, formatYamlError } from 'better-zod-errors'
 import * as chokidar from 'chokidar'
 import * as fs from 'fs-extra'
 import * as yaml from 'js-yaml'
+import * as _ from 'lodash'
 import { z } from 'zod'
 
 import * as path from 'node:path'
 import * as process from 'node:process'
 
-import { storageOptionsSchema } from '@/attachment/storages'
-import { crawlerOptionsSchema } from '@/crawler/crawlers'
+import { ConfigData, configDataSchema } from '@/config/schema'
 import { EventEmitter, EventMap } from '@/utils/event-emitter'
-
-const configDataSchema = z
-  .object({
-    attachment: z.object({
-      downloadThrottle: z.object({
-        download: z.number(),
-        failover: z.number(),
-      }),
-      hashCheck: z.boolean().optional(),
-    }),
-    crawling: z.object({
-      deleteObsolete: z.boolean().optional(),
-      interval: z.union([z.number(), z.string()]),
-    }),
-    storage: storageOptionsSchema,
-    watchers: z.array(crawlerOptionsSchema),
-  })
-  .describe("The application's main configuration schema.")
-
-/**
- * @public
- */
-export type ConfigData = z.infer<typeof configDataSchema>
 
 const AVAILABLE_CONFIG_FILE_PATHS = [
   path.join(process.cwd(), 'cabinet.config.json'),
@@ -62,6 +39,7 @@ export class ConfigService
 {
   private readonly logger = new Logger(ConfigService.name)
 
+  private currentConfigPath: string | null = null
   private currentConfig: ConfigData | null = null
   private watcher: chokidar.FSWatcher | null = null
 
@@ -85,7 +63,7 @@ export class ConfigService
       throw new Error('Config is not loaded properly')
     }
 
-    return this.currentConfig
+    return _.cloneDeep(this.currentConfig)
   }
 
   async onModuleInit() {
@@ -102,13 +80,11 @@ export class ConfigService
       }
     }
 
-    const configFilePath = await this.loadConfig()
+    this.currentConfigPath = this.searchForConfigFile()
+    await this.loadConfig()
 
-    this.watcher = chokidar.watch(configFilePath)
-    this.watcher.on(
-      'change',
-      this.handleConfigChange.bind(this, configFilePath),
-    )
+    this.watcher = chokidar.watch(this.currentConfigPath)
+    this.watcher.on('change', this.handleConfigChange.bind(this))
   }
 
   async onModuleDestroy() {
@@ -142,13 +118,32 @@ export class ConfigService
     return existingConfigFilePaths[0]
   }
 
-  private async loadConfig(targeFilePath?: string) {
-    const configFilePath = targeFilePath ?? this.searchForConfigFile()
-    const isJson = path.extname(configFilePath).toLowerCase() === '.json'
+  async updateConfig(configData: ConfigData) {
+    if (!this.currentConfigPath) {
+      throw new Error('Config file path is not set')
+    }
+
+    const isJson =
+      path.extname(this.currentConfigPath).toLowerCase() === '.json'
+
+    const dataToWrite = isJson
+      ? JSON.stringify(configData, null, 2)
+      : yaml.dump(configData, { noRefs: true })
+
+    await fs.writeFile(this.currentConfigPath, dataToWrite, 'utf-8')
+  }
+
+  private async loadConfig() {
+    if (!this.currentConfigPath) {
+      throw new Error('Config file path is not set')
+    }
+
+    const isJson =
+      path.extname(this.currentConfigPath).toLowerCase() === '.json'
 
     const config = isJson
-      ? await fs.readJson(configFilePath)
-      : yaml.load(await fs.promises.readFile(configFilePath, 'utf-8'))
+      ? await fs.readJson(this.currentConfigPath)
+      : yaml.load(await fs.promises.readFile(this.currentConfigPath, 'utf-8'))
 
     try {
       this.currentConfig = configDataSchema.parse(config)
@@ -167,15 +162,13 @@ export class ConfigService
         throw error
       }
     }
-
-    return configFilePath
   }
 
-  private async handleConfigChange(targetFilePath: string) {
+  private async handleConfigChange() {
     this.logger.warn('Server configuration changed, reloading configuration...')
 
     try {
-      await this.loadConfig(targetFilePath)
+      await this.loadConfig()
       this.logger.log('Reloaded server configuration file successfully.')
       this.emit('change')
     } catch (e) {

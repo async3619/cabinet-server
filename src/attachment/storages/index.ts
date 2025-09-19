@@ -35,7 +35,3 @@ export function createStorageInstance<T extends StorageTypes['name']>(
       throw new Error(`Unsupported storage type: ${(options as any).type}`)
   }
 }
-
-export * from './base'
-export * from './file-system'
-export * from './s3'
