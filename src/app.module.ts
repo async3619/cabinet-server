@@ -1,8 +1,10 @@
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { BullModule } from '@nestjs/bullmq'
 import { Module } from '@nestjs/common'
+import { APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core'
 import { GraphQLModule } from '@nestjs/graphql'
 import { ScheduleModule } from '@nestjs/schedule'
+import { ZodSerializerInterceptor, ZodValidationPipe } from 'nestjs-zod'
 
 import * as path from 'node:path'
 
@@ -51,6 +53,16 @@ import { WatcherModule } from '@/watcher/watcher.module'
     StatisticModule,
     ActivityLogModule,
     MusicSourceModule,
+  ],
+  providers: [
+    {
+      provide: APP_PIPE,
+      useClass: ZodValidationPipe,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ZodSerializerInterceptor,
+    },
   ],
 })
 export class AppModule {}

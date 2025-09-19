@@ -56,6 +56,7 @@
     "husky": "^9.1.6",
     "js-yaml": "^4.1.0",
     "lodash": "^4.17.21",
+    "nestjs-zod": "^5.0.1",
     "pluralize": "^8.0.0",
     "pretty-ms": "^9.2.0",
     "prisma": "^6.7.0",
