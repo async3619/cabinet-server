@@ -9,5 +9,6 @@
     "@semantic-release/*",
     "conventional-changelog-conventionalcommits",
     "graphql-ws"
-  ]
+  ],
+  "ignore": ["src/types.ts"]
 }
