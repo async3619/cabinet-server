@@ -1,9 +1,4 @@
-import { z } from 'zod'
-
-import {
-  FourChanCrawler,
-  fourChanCrawlerOptionsSchema,
-} from '@/crawler/crawlers/four-chan'
+import { FourChanCrawler } from '@/crawler/crawlers/four-chan'
 import type { Thread } from '@/generated/graphql'
 import type { Watcher } from '@/watcher/types/watcher'
 
@@ -34,7 +29,3 @@ export type CrawlerOptionsMap = {
 export const CRAWLER_CONSTRUCTOR_MAP: CrawlerConstructorMap = {
   'four-chan': FourChanCrawler,
 }
-
-export const crawlerOptionsSchema = z.discriminatedUnion('type', [
-  fourChanCrawlerOptionsSchema,
-])

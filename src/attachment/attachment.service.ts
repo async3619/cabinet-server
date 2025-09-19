@@ -14,7 +14,8 @@ import { decode as decodeHtmlEntities } from 'html-entities'
 
 import { AttachmentJobData } from '@/attachment/attachment.processor'
 import { createStorageInstance } from '@/attachment/storages'
-import { BaseStorage, BaseStorageOptions } from '@/attachment/storages/base'
+import { BaseStorage } from '@/attachment/storages/base'
+import { BaseStorageOptions } from '@/attachment/storages/base/schema'
 import { EntityBaseService } from '@/common/entity-base.service'
 import { ConfigService } from '@/config/config.service'
 import {
