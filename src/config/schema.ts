@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-import { storageOptionsSchema } from '@/attachment/storages'
-import { crawlerOptionsSchema } from '@/crawler/crawlers'
+import { storageOptionsSchema } from '@/attachment/storages/schema'
+import { crawlerOptionsSchema } from '@/crawler/crawlers/schema'
 
 export const configDataSchema = z
   .object({

@@ -1,16 +1,16 @@
 import { z } from 'zod'
 
-const baseQueryItemSchema = z.object({
+export const baseQueryItemSchema = z.object({
   exclude: z.boolean().optional(),
   query: z.string(),
 })
 
-const textQueryItemSchema = baseQueryItemSchema.extend({
+export const textQueryItemSchema = baseQueryItemSchema.extend({
   caseInsensitive: z.boolean().optional(),
   type: z.literal('text'),
 })
 
-const regexQueryItemSchema = baseQueryItemSchema.extend({
+export const regexQueryItemSchema = baseQueryItemSchema.extend({
   dotAll: z.boolean().optional(),
   ignoreCase: z.boolean().optional(),
   multiline: z.boolean().optional(),
@@ -18,19 +18,19 @@ const regexQueryItemSchema = baseQueryItemSchema.extend({
   unicode: z.boolean().optional(),
 })
 
-const queryItemSchema = z.discriminatedUnion('type', [
+export const queryItemSchema = z.discriminatedUnion('type', [
   textQueryItemSchema,
   regexQueryItemSchema,
 ])
 
-const fourChanCrawlerEntrySchema = z.object({
+export const fourChanCrawlerEntrySchema = z.object({
   boards: z.array(z.string()),
   queries: z.array(queryItemSchema),
   searchArchive: z.boolean().optional(),
   target: z.enum(['title', 'content', 'both']),
 })
 
-const fourChanCrawlerOptionsSchema = z.object({
+export const fourChanCrawlerOptionsSchema = z.object({
   name: z.string(),
   type: z.literal('four-chan'),
   cloudflare: z
@@ -48,5 +48,3 @@ export type QueryItem = z.infer<typeof queryItemSchema>
 export type FourChanCrawlerOptions = z.infer<
   typeof fourChanCrawlerOptionsSchema
 >
-
-export { fourChanCrawlerOptionsSchema }

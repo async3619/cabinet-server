@@ -1,21 +1,11 @@
-import { z } from 'zod'
-
-import {
-  FileSystemStorage,
-  fileSystemStorageOptionsSchema,
-} from './file-system'
-import { S3Storage, s3StorageOptionsSchema } from './s3'
+import { FileSystemStorage } from '@/attachment/storages/file-system'
+import { S3Storage } from '@/attachment/storages/s3'
 
 type StorageTypes = FileSystemStorage | S3Storage
 
 type StorageMap = {
   [TName in StorageTypes['name']]: Extract<StorageTypes, { name: TName }>
 }
-
-export const storageOptionsSchema = z.discriminatedUnion('type', [
-  fileSystemStorageOptionsSchema,
-  s3StorageOptionsSchema,
-])
 
 type StorageOptionsMap = {
   [TName in StorageTypes['name']]: StorageMap[TName]['options']
