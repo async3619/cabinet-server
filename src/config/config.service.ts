@@ -13,32 +13,8 @@ import { z } from 'zod'
 import * as path from 'node:path'
 import * as process from 'node:process'
 
-import { storageOptionsSchema } from '@/attachment/storages'
-import { crawlerOptionsSchema } from '@/crawler/crawlers'
+import { ConfigData, configDataSchema } from '@/config/schema'
 import { EventEmitter, EventMap } from '@/utils/event-emitter'
-
-const configDataSchema = z
-  .object({
-    attachment: z.object({
-      downloadThrottle: z.object({
-        download: z.number(),
-        failover: z.number(),
-      }),
-      hashCheck: z.boolean().optional(),
-    }),
-    crawling: z.object({
-      deleteObsolete: z.boolean().optional(),
-      interval: z.union([z.number(), z.string()]),
-    }),
-    storage: storageOptionsSchema,
-    watchers: z.array(crawlerOptionsSchema),
-  })
-  .describe("The application's main configuration schema.")
-
-/**
- * @public
- */
-export type ConfigData = z.infer<typeof configDataSchema>
 
 const AVAILABLE_CONFIG_FILE_PATHS = [
   path.join(process.cwd(), 'cabinet.config.json'),
