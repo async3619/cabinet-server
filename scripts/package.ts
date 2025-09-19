@@ -82,6 +82,7 @@ export async function preparePackage() {
     types: 'types.d.ts',
     files: await glob.async('**/*', { cwd: LIB_PATH }),
     dependencies: Object.fromEntries(libraries),
+    publishConfig: { access: 'public' },
   }
 
   await fs.writeFile(
