@@ -20,5 +20,6 @@ export class ConfigController {
   @Put('/')
   async update(@Body() newConfig: ConfigDTO) {
     await this.configService.updateConfig(newConfig)
+    return newConfig
   }
 }
