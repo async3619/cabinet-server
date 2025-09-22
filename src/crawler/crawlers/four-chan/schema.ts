@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const baseQueryItemSchema = z.object({
   exclude: z.boolean().optional(),
-  query: z.string(),
+  query: z.string().min(1, { error: 'Query cannot be empty' }),
 })
 
 export const textQueryItemSchema = baseQueryItemSchema.extend({
@@ -24,23 +24,31 @@ export const queryItemSchema = z.discriminatedUnion('type', [
 ])
 
 export const fourChanCrawlerEntrySchema = z.object({
-  boards: z.array(z.string()),
-  queries: z.array(queryItemSchema),
+  boards: z
+    .array(z.string().min(1, { error: 'Board name cannot be empty' }))
+    .min(1, { error: 'At least one board is required' }),
+  queries: z
+    .array(queryItemSchema)
+    .min(1, { error: 'At least one query is required' }),
   searchArchive: z.boolean().optional(),
   target: z.enum(['title', 'content', 'both']),
 })
 
 export const fourChanCrawlerOptionsSchema = z.object({
-  name: z.string(),
+  name: z.string().min(1, { error: 'Crawler name cannot be empty' }),
   type: z.literal('four-chan'),
   cloudflare: z
     .object({
       bm: z.string().optional(),
-      clearance: z.string(),
+      clearance: z
+        .string()
+        .min(1, { error: 'Cloudflare clearance cannot be empty' }),
     })
     .optional(),
-  endpoint: z.string(),
-  entries: z.array(fourChanCrawlerEntrySchema),
+  endpoint: z.string().url({ error: 'Endpoint must be a valid URL' }),
+  entries: z
+    .array(fourChanCrawlerEntrySchema)
+    .min(1, { error: 'At least one entry is required' }),
 })
 
 export type BaseQueryItem = z.infer<typeof baseQueryItemSchema>
