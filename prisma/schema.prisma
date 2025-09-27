@@ -92,6 +92,7 @@ model Attachment {
   downloadedAt DateTime?
   timestamp    BigInt?
   fileUri      String?
+  favorite     Boolean   @default(false)
 
   thumbnailWidth   Int?
   thumbnailHeight  Int?
