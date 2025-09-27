@@ -1,5 +1,13 @@
 import { Inject } from '@nestjs/common'
-import { Args, Int, Query, ResolveField, Resolver, Root } from '@nestjs/graphql'
+import {
+  Args,
+  Int,
+  Mutation,
+  Query,
+  ResolveField,
+  Resolver,
+  Root,
+} from '@nestjs/graphql'
 import { GraphQLBigInt } from 'graphql-scalars'
 
 import { AttachmentService } from '@/attachment/attachment.service'
@@ -48,6 +56,19 @@ export class AttachmentResolver {
     @Args() args: FindManyAttachmentArgs,
   ): Promise<Attachment[]> {
     return this.attachmentService.find(args)
+  }
+
+  @Mutation(() => Boolean)
+  async markAttachmentAsFavorite(
+    @Args('id', { type: () => String }) id: string,
+    @Args('favorite', { type: () => Boolean }) favorite: boolean,
+  ): Promise<boolean> {
+    await this.attachmentService.update({
+      where: { id },
+      data: { favorite },
+    })
+
+    return true
   }
 
   @ResolveField(() => [Thread])
