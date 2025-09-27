@@ -1,6 +1,6 @@
 {
   "name": "@async3619/cabinet-server",
-  "version": "1.5.0-dev.6",
+  "version": "1.5.0",
   "description": "",
   "private": true,
   "main": "./dist/index.js",
