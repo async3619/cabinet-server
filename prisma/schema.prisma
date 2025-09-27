@@ -81,16 +81,17 @@ model Attachment {
   id   String @id
   uuid String @unique @default(uuid())
 
-  name      String
-  width     Int
-  height    Int
-  size      Int?
-  extension String
-  mime      String?
-  hash      String?
-  createdAt DateTime
-  timestamp BigInt?
-  fileUri   String?
+  name         String
+  width        Int
+  height       Int
+  size         Int?
+  extension    String
+  mime         String?
+  hash         String?
+  createdAt    DateTime
+  downloadedAt DateTime?
+  timestamp    BigInt?
+  fileUri      String?
 
   thumbnailWidth   Int?
   thumbnailHeight  Int?

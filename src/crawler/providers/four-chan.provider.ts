@@ -1,4 +1,4 @@
-import type { FourChanCrawlerOptions } from '@/crawler/crawlers/four-chan'
+import type { FourChanCrawlerOptions } from '@/crawler/crawlers/four-chan/schema'
 import { BaseProvider } from '@/crawler/providers/base.provider'
 import type { FourChanAPIEndpoints } from '@/crawler/providers/four-chan.provider.types'
 import type { RawAttachment } from '@/crawler/types/attachment'

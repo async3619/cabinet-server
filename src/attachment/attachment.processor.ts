@@ -128,7 +128,7 @@ export class AttachmentProcessor extends WorkerHost {
 
           await this.attachmentService.update({
             where: { id: uniqueId },
-            data: { fileUri, thumbnailFileUri, mime },
+            data: { fileUri, thumbnailFileUri, mime, downloadedAt: new Date() },
           })
 
           this.logger.log(`Successfully downloaded file ${fileInformation}`)
