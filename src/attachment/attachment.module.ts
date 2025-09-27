@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq'
 import { forwardRef, Module } from '@nestjs/common'
 
 import { ActivityLogModule } from '@/activity-log/activity-log.module'
+import { AttachmentMigrationService } from '@/attachment/attachment-migration.service'
 import { AttachmentController } from '@/attachment/attachment.controller'
 import { AttachmentProcessor } from '@/attachment/attachment.processor'
 import { AttachmentResolver } from '@/attachment/attachment.resolver'
@@ -18,7 +19,12 @@ import { PostModule } from '@/post/post.module'
     ActivityLogModule,
     forwardRef(() => PostModule),
   ],
-  providers: [AttachmentService, AttachmentProcessor, AttachmentResolver],
+  providers: [
+    AttachmentService,
+    AttachmentMigrationService,
+    AttachmentProcessor,
+    AttachmentResolver,
+  ],
   exports: [AttachmentService],
   controllers: [AttachmentController],
 })
