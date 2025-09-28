@@ -211,6 +211,11 @@ export class CrawlerService
                 isSuccessful: true,
               }
 
+              watcherThreadIdMap = {
+                ...watcherThreadIdMap,
+                ...result.watcherThreadIdMap,
+              }
+
               const archivedWatcherThreads = watcherThreads.filter(
                 (item) => !watcherThreadIdMap[item.id],
               )
@@ -218,11 +223,6 @@ export class CrawlerService
               await this.watcherService.markWatcherThreadsAsArchived(
                 archivedWatcherThreads,
               )
-
-              watcherThreadIdMap = {
-                ...watcherThreadIdMap,
-                ...result.watcherThreadIdMap,
-              }
 
               for (const thread of result.threads) {
                 const id = getThreadUniqueId(thread)
