@@ -218,37 +218,35 @@ export class FourChanCrawler extends BaseCrawler<
     const watcherThreadMap: Record<number, string> = {}
     const allBoards = await this.provider.getAllBoards()
 
-    if (watcherThreads.length > 0) {
+    for (const watcherThread of watcherThreads) {
       try {
-        for (const watcherThread of watcherThreads) {
-          const { url } = watcherThread
-          const threadData = this.parseWatcherThreadUrl(url)
-          if (!threadData) {
-            this.logger.warn(`Failed to parse watcher thread URL: ${url}`)
-            continue
-          }
-
-          const { boardCode, threadId } = threadData
-          const board = allBoards.find((board) => board.code === boardCode)
-          if (!board) {
-            this.logger.warn(
-              `Failed to find board for watcher thread: /${boardCode}/ (${url})`,
-            )
-            continue
-          }
-
-          const thread = await this.provider.getThreadFromId(threadId, board)
-          if (!thread) {
-            this.logger.warn(
-              `Failed to find thread for watcher thread: ${threadId} (${url})`,
-            )
-            continue
-          }
-
-          const uniqueId = getThreadUniqueId(thread)
-          matchedThreads[uniqueId] = thread
-          watcherThreadMap[watcherThread.id] = uniqueId
+        const { url } = watcherThread
+        const threadData = this.parseWatcherThreadUrl(url)
+        if (!threadData) {
+          this.logger.warn(`Failed to parse watcher thread URL: ${url}`)
+          continue
         }
+
+        const { boardCode, threadId } = threadData
+        const board = allBoards.find((board) => board.code === boardCode)
+        if (!board) {
+          this.logger.warn(
+            `Failed to find board for watcher thread: /${boardCode}/ (${url})`,
+          )
+          continue
+        }
+
+        const thread = await this.provider.getThreadFromId(threadId, board)
+        if (!thread) {
+          this.logger.warn(
+            `Failed to find thread for watcher thread: ${threadId} (${url})`,
+          )
+          continue
+        }
+
+        const uniqueId = getThreadUniqueId(thread)
+        matchedThreads[uniqueId] = thread
+        watcherThreadMap[watcherThread.id] = uniqueId
       } catch (e) {
         this.logger.warn(
           `Failed to get actual threads from watcher threads: ${e}`,
