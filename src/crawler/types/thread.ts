@@ -4,7 +4,7 @@ import { getBoardUniqueId } from '@/crawler/types/board'
 
 export interface RawThread<TProviderName extends string> {
   attachments: RawAttachment<TProviderName>[]
-  author: string
+  author?: string
   board: RawBoard<TProviderName>
   content?: string
   createdAt: number

@@ -39,7 +39,7 @@ export class ThreadService extends EntityBaseService<'thread'> {
 
       const input: Omit<Prisma.ThreadCreateInput, 'id'> = {
         no: thread.no,
-        author: thread.author,
+        author: thread.author ?? 'Anonymous',
         title: thread.title,
         content: thread.content,
         createdAt: dayjs.unix(thread.createdAt).toDate(),
