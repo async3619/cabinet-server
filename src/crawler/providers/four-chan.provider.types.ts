@@ -10,7 +10,7 @@ interface FourChanNormalPost {
   h?: number
   imagelimit?: number
   images?: number
-  name: string
+  name?: string
   no: number
   now: string
   replies?: number
@@ -85,7 +85,7 @@ interface FourChanCatalogResponse {
     images: number
     last_modified: number
     md5: string
-    name: string
+    name?: string
     no: number
     now: string
     omitted_images?: number

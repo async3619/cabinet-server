@@ -36,7 +36,7 @@ export class PostService extends EntityBaseService<'post'> {
       const id = getPostUniqueId(post)
       const input: Omit<Prisma.PostCreateInput, 'id'> = {
         no: post.no,
-        author: post.author,
+        author: post.author ?? 'Anonymous',
         title: post.title,
         content: post.content,
         createdAt: dayjs.unix(post.createdAt).toDate(),
